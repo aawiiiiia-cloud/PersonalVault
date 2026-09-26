@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>字体资源调研报告 · 个人知识工作台</title>
+<style>
+  :root {
+    --paper: #f6f7fa;
+    --panel: #fafbfd;
+    --card: #ffffff;
+    --ink: #1d1f26;
+    --ink-soft: #474c59;
+    --muted: #78808f;
+    --faint: #a4abba;
+    --line: #e5e7ed;
+    --line-strong: #cdd2dc;
+    --accent: #4a6cf7;
+    --accent-deep: #3a57d4;
+    --accent-soft: #e9eefd;
+    --green: #35a06f;
+    --violet: #8b5cf6;
+    --ochre: #d99413;
+    --shadow-card: 0 1px 2px rgba(29,31,38,.05), 0 10px 28px rgba(29,31,38,.07);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    font-size: 15px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 64px 40px 120px; }
+
+  /* ---------- 头部 ---------- */
+  header.hero { border-bottom: 1px solid var(--line-strong); padding-bottom: 40px; margin-bottom: 48px; }
+  .kicker {
+    font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-bottom: 14px;
+  }
+  h1 { font-size: 34px; font-weight: 700; letter-spacing: .02em; line-height: 1.3; }
+  .hero p.sub { color: var(--muted); margin-top: 12px; max-width: 720px; }
+  .meta { display: flex; gap: 24px; margin-top: 20px; font-size: 13px; color: var(--faint); }
+
+  /* ---------- 目录 ---------- */
+  nav.toc {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 22px 28px; margin-bottom: 56px; box-shadow: var(--shadow-card);
+  }
+  nav.toc .toc-title { font-size: 12px; letter-spacing: .12em; color: var(--muted); margin-bottom: 10px; }
+  nav.toc ol { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 4px 32px; }
+  nav.toc a { color: var(--ink-soft); text-decoration: none; font-size: 14px; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc a::before { content: "§ "; color: var(--faint); }
+
+  /* ---------- 章节 ---------- */
+  section { margin-bottom: 72px; }
+  h2 {
+    font-size: 22px; font-weight: 700; padding-bottom: 12px;
+    border-bottom: 1px solid var(--line-strong); margin-bottom: 24px;
+  }
+  h2 .no { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: 10px; }
+  h3 { font-size: 17px; font-weight: 600; margin: 32px 0 12px; color: var(--ink); }
+  p.lead { color: var(--ink-soft); margin-bottom: 16px; max-width: 800px; }
+
+  /* ---------- 卡片 ---------- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 20px 22px; box-shadow: var(--shadow-card);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .card h4 { font-size: 16px; font-weight: 600; }
+  .card h4 .en { color: var(--muted); font-weight: 500; font-size: 13px; margin-left: 8px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-size: 11px; padding: 2px 9px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent-deep); font-weight: 500;
+  }
+  .tag.green { background: #e6f4ee; color: var(--green); }
+  .tag.violet { background: #f0ebfc; color: var(--violet); }
+  .tag.ochre { background: #faf1de; color: var(--ochre); }
+  .tag.gray { background: #eef0f4; color: var(--ink-soft); }
+  .card p.desc { font-size: 13.5px; color: var(--ink-soft); }
+  .card .links { margin-top: auto; display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; padding-top: 6px; border-top: 1px dashed var(--line); }
+  .card .links a { color: var(--accent); text-decoration: none; }
+  .card .links a:hover { text-decoration: underline; }
+
+  /* ---------- 表格 ---------- */
+  table {
+    width: 100%; border-collapse: collapse; background: var(--card);
+    border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+    font-size: 13.5px; box-shadow: var(--shadow-card);
+  }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--panel); font-size: 12px; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  td b { font-weight: 600; }
+  .pill { display: inline-block; font-size: 11.5px; padding: 1px 8px; border-radius: 999px; font-weight: 600; }
+  .pill.ofl { background: #e6f4ee; color: var(--green); }
+  .pill.free { background: #faf1de; color: var(--ochre); }
+  .pill.restricted { background: #fdecec; color: #c24045; }
+
+  /* ---------- 代码 ---------- */
+  pre {
+    background: #1a1c22; color: #d8dce6; border-radius: 10px;
+    padding: 18px 20px; font-size: 12.5px; line-height: 1.7; overflow-x: auto;
+    font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+  }
+  pre .cmt { color: #7c8598; }
+  code.inline {
+    background: #eef0f4; border-radius: 4px; padding: 1px 6px;
+    font-family: "JetBrains Mono", Consolas, monospace; font-size: 12.5px; color: var(--accent-deep);
+  }
+
+  /* ---------- 提示块 ---------- */
+  .note {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 8px 8px 0; padding: 14px 18px; font-size: 13.5px; color: var(--ink-soft);
+    margin: 16px 0;
+  }
+  .note.warn { border-left-color: var(--ochre); background: #faf1de; }
+
+  /* ---------- 判断维度 ---------- */
+  .dims { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+  .dim { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+  .dim b { display: block; font-size: 14px; margin-bottom: 4px; }
+  .dim span { font-size: 13px; color: var(--muted); }
+
+  a { color: var(--accent); }
+  footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line-strong); color: var(--faint); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="kicker">Font Research · 2026-09</div>
+  <h1>字体资源调研报告<br>个人知识工作台（知行台）视觉改造</h1>
+  <p class="sub">为「安静、灵活的个人数字工作室」定位（参考 Are.na 的细线留白、Cosmos 的媒体画廊、Craft 的冷白配色）调研完整字体家族的可下载渠道、授权条款与候选清单。本报告只提供事实与维度，美学取舍由你自己判断。</p>
+  <div class="meta">
+    <span>产出日期：2026-09-22</span>
+    <span>范围：中文正文 / UI · 标题 · 英文与数字 · 等宽代码</span>
+    <span>约束：个人应用 · Electron 离线可打包 · 尽量免费可商用</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="toc-title">目录</div>
+  <ol>
+    <li><a href="#s1">结论速览</a></li>
+    <li><a href="#s2">下载渠道：去哪里拿到完整字体</a></li>
+    <li><a href="#s3">中文字体候选（正文 / UI）</a></li>
+    <li><a href="#s4">中文字体候选（标题 / 个性）</a></li>
+    <li><a href="#s5">英文、数字与等宽字体候选</a></li>
+    <li><a href="#s6">授权条款速查表</a></li>
+    <li><a href="#s7">美学自评维度（判断框架）</a></li>
+    <li><a href="#s8">前端落地技术要点</a></li>
+    <li><a href="#s9">针对知行台风格的搭配方向</a></li>
+  </ol>
+</nav>
+
+<!-- ============ 1 结论速览 ============ -->
+<section id="s1">
+  <h2><span class="no">01</span>结论速览</h2>
+  <p class="lead">对个人应用而言，字体问题在 2026 年已经基本「免费化」：高质量中文开源字体（OFL 协议）覆盖正文、宋体、楷体、标题黑全部需求，唯一要注意的是<strong>不要用系统自带的微软雅黑做内嵌分发</strong>（方正授权限制），以及华为鸿蒙字体「免费但不可修改、需开发者账号」。</p>
+  <div class="note">
+    如果只下载三个：<b>思源黑体</b>（正文/UI 兜底，最稳）＋ <b>霞鹜文楷</b>（阅读/引文气质）＋ <b>Inter 或 MiSans</b>（现代 UI 感，含优秀西文数字）。等宽场景加 <b>JetBrains Mono</b> 或 <b>更纱黑体</b>。
+  </div>
+</section>
+
+<!-- ============ 2 下载渠道 ============ -->
+<section id="s2">
+  <h2><span class="no">02</span>下载渠道：去哪里拿到完整字体</h2>
+  <p class="lead">「完整的字体设计」应优先从<strong>官方仓库或官方站点</strong>下载，能拿到全字重、完整字符集、可变字体和源文件；聚合站适合发现和比价，但要留意版本滞后。</p>
+
+  <h3>官方 / 一手渠道（推荐）</h3>
+  <div class="grid">
+    <div class="card">
+      <h4>Google Fonts<span class="en">fonts.google.com</span></h4>
+      <div class="tags"><span class="tag green">OFL 为主</span><span class="tag">可下载全家族</span><span class="tag">含中文 Noto 系</span></div>
+      <p class="desc">开源字体最大集散地。Noto Sans SC / Noto Serif SC（即思源黑/宋的 Google 版）、Inter、IBM Plex、JetBrains Mono 都可一键下载完整字重包（TTF + 可变字体）。也提供 Web CSS API。</p>
+      <div class="links"><a href="https://fonts.google.com" target="_blank">fonts.google.com</a></div>
+    </div>
+    <div class="card">
+      <h4>GitHub Releases<span class="en">各字体项目仓库</span></h4>
+      <div class="tags"><span class="tag green">源头最新</span><span class="tag">OTF/TTF/WOFF2 齐全</span><span class="tag">附源文件</span></div>
+      <p class="desc">思源黑体（adobe-fonts/source-han-sans）、思源宋体、霞鹜文楷（lxgw/LxgwWenKai）、得意黑（atelier-anchor/smiley-sans）、更纱黑体（be5invis/Sarasa-Gothic）等都在 Releases 发布完整包，通常含 OTF、TTF、WOFF2 与可变版本。</p>
+      <div class="links"><a href="https://github.com/adobe-fonts/source-han-sans" target="_blank">source-han-sans</a><a href="https://github.com/lxgw/LxgwWenKai" target="_blank">LxgwWenKai</a></div>
+    </div>
+    <div class="card">
+      <h4>Fontsource<span class="en">fontsource.org</span></h4>
+      <div class="tags"><span class="tag">npm 包</span><span class="tag">自托管</span><span class="tag">按需字重</span></div>
+      <p class="desc">把 Google Fonts 打包成 npm 依赖（如 <code class="inline">@fontsource/inter</code>），适合构建链里直接引入、离线打包进 Electron，不依赖 CDN。中文字体覆盖有限，主要靠英文/等宽。</p>
+      <div class="links"><a href="https://fontsource.org" target="_blank">fontsource.org</a></div>
+    </div>
+    <div class="card">
+      <h4>厂商官方站点<span class="en">小米 / 华为 / 阿里 / OPPO</span></h4>
+      <div class="tags"><span class="tag">免费商用</span><span class="tag">品牌字体</span></div>
+      <p class="desc">MiSans 从小米官方设计资源页下载（hyperos.mi.com/font）；阿里巴巴普惠体在 iconfont 字体专区；HarmonyOS Sans 需华为开发者账号；OPPO Sans 走 OPPO 官方页。这些是品牌定制的「全场景字体」，现代感强。</p>
+      <div class="links"><a href="https://hyperos.mi.com/font" target="_blank">小米 MiSans</a><a href="https://www.iconfont.cn/fonts/detail?cnid=adI1E7HF7yme" target="_blank">阿里普惠体</a></div>
+    </div>
+  </div>
+
+  <h3>聚合与发现渠道（逛、挑、对比）</h3>
+  <div class="grid">
+    <div class="card">
+      <h4>猫啃网<span class="en">maoken.com</span></h4>
+      <div class="tags"><span class="tag green">中文免费字体大全</span><span class="tag">标注授权</span><span class="tag">在线预览</span></div>
+      <p class="desc">中文圈最系统的免费商用字体聚合站，每款字体附授权说明、字数统计、网盘/官网双下载。适合按风格逛（黑体/宋体/楷体/手写/像素），其「免费商用字体清单」每年更新。</p>
+      <div class="links"><a href="https://www.maoken.com" target="_blank">maoken.com</a></div>
+    </div>
+    <div class="card">
+      <h4>100font<span class="en">100font.com</span></h4>
+      <div class="tags"><span class="tag green">免费商用聚合</span><span class="tag">打包下载</span></div>
+      <p class="desc">另一个中文免费商用字体站，收录站酷系、优设、字体传奇等国产免费字体，提供直接下载，页面简洁。</p>
+      <div class="links"><a href="https://www.100font.com" target="_blank">100font.com</a></div>
+    </div>
+    <div class="card">
+      <h4>Adobe Fonts<span class="en">fonts.adobe.com</span></h4>
+      <div class="tags"><span class="tag ochre">订阅制</span><span class="tag">高质量西文</span><span class="tag gray">不可本地分发</span></div>
+      <p class="desc">字体质量天花板之一，但需 Creative Cloud 订阅，且授权以「同步使用」为主，不适合把字体文件打包进个人应用分发。仅作审美参考源。</p>
+      <div class="links"><a href="https://fonts.adobe.com" target="_blank">fonts.adobe.com</a></div>
+    </div>
+    <div class="card">
+      <h4>字由<span class="en">hellofont.cn</span></h4>
+      <div class="tags"><span class="tag ochre">客户端管理</span><span class="tag">商业字体库</span></div>
+      <p class="desc">国内字体管理与授权平台，聚合方正、汉仪等商业字库，按字购买授权。如果未来想要更独特的商业字体气质（如宋刻本、民国风），这里能买正版。</p>
+      <div class="links"><a href="https://www.hellofont.cn" target="_blank">hellofont.cn</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3 中文正文/UI ============ -->
+<section id="s3">
+  <h2><span class="no">03</span>中文字体候选（正文 / UI）</h2>
+  <p class="lead">这一层决定应用 80% 的观感。都是全字重、字符覆盖完整的「家族级」字体，可放心作为系统字体使用。</p>
+  <table>
+    <thead><tr><th>字体</th><th>风格与气质</th><th>字重</th><th>字符覆盖</th><th>授权</th><th>下载</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>思源黑体</b><br><span style="color:var(--muted)">Source Han Sans / Noto Sans SC</span></td>
+        <td>中性、理性、教科书级。字腔开阔、重心稳，最「不打扰」的黑体，长文阅读与 UI 都稳。</td>
+        <td>7 档 + 可变</td>
+        <td>简繁日韩全 CJK，约 5 万字形</td>
+        <td><span class="pill ofl">OFL 1.1</span></td>
+        <td><a href="https://github.com/adobe-fonts/source-han-sans/releases" target="_blank">GitHub</a> · <a href="https://fonts.google.com/noto/specimen/Noto+Sans+SC" target="_blank">Google Fonts</a></td>
+      </tr>
+      <tr>
+        <td><b>思源宋体</b><br><span style="color:var(--muted)">Source Han Serif / Noto Serif SC</span></td>
+        <td>明体骨架 + 现代衬线，书卷气、有「出版物」感。适合正文阅读模式、引文、标题点缀。</td>
+        <td>7 档 + 可变</td>
+        <td>简繁日韩全 CJK</td>
+        <td><span class="pill ofl">OFL 1.1</span></td>
+        <td><a href="https://github.com/adobe-fonts/source-han-serif/releases" target="_blank">GitHub</a> · <a href="https://fonts.google.com/noto/specimen/Noto+Serif+SC" target="_blank">Google Fonts</a></td>
+      </tr>
+      <tr>
+        <td><b>MiSans</b><br><span style="color:var(--muted)">小米兰亭 · 汉仪联合设计</span></td>
+        <td>笔型平直简约、字面修长，现代科技感强；10 档字重 + OpenType 数字特性，UI 层级控制极精细。</td>
+        <td>10 档 + 可变 + Mono</td>
+        <td>2.9 万字符；Global 版 600+ 语言</td>
+        <td><span class="pill ofl">OFL 1.1</span></td>
+        <td><a href="https://hyperos.mi.com/font" target="_blank">小米官方</a> · <a href="https://fonts.google.com/specimen/MiSans" target="_blank">Google Fonts</a></td>
+      </tr>
+      <tr>
+        <td><b>霞鹜文楷</b><br><span style="color:var(--muted)">LXGW WenKai · 基于 Klee One</span></td>
+        <td>楷体教科书风，温润、有手写温度，中文知识社区事实标准。长文沉浸阅读极佳；另有 Lite 版（体积小，适合内嵌）。</td>
+        <td>3 档</td>
+        <td>GB2312 + 常用扩展，Lite 版精简</td>
+        <td><span class="pill ofl">OFL 1.1</span></td>
+        <td><a href="https://github.com/lxgw/LxgwWenKai/releases" target="_blank">GitHub</a> · <a href="https://www.maoken.com/freefonts/9704.html" target="_blank">猫啃网</a></td>
+      </tr>
+      <tr>
+        <td><b>阿里巴巴普惠体 3.0</b></td>
+        <td>方正饱满、亲和力强，商业物料出身但正文也能打；笔画现代简洁。</td>
+        <td>5 档 + 可变</td>
+        <td>GB18030 + 多语种</td>
+        <td><span class="pill free">免费商用</span></td>
+        <td><a href="https://www.iconfont.cn/fonts/detail?cnid=adI1E7HF7yme" target="_blank">iconfont 官方页</a></td>
+      </tr>
+      <tr>
+        <td><b>HarmonyOS Sans</b><br><span style="color:var(--muted)">华为鸿蒙</span></td>
+        <td>几何感强、字腔匀称，屏显优化出色，是「系统级字体」审美标杆。</td>
+        <td>6 档 + 可变</td>
+        <td>简中为主 + 多文种</td>
+        <td><span class="pill free">免费商用·不可修改</span></td>
+        <td><a href="https://developer.huawei.com/consumer/cn/design/resource/" target="_blank">华为开发者</a>（需账号）</td>
+      </tr>
+      <tr>
+        <td><b>OPPO Sans 4.0</b></td>
+        <td>字面大、开放通透，介于思源与 MiSans 之间的「新国民黑体」。</td>
+        <td>5 档 + 可变</td>
+        <td>简中 + 多语种</td>
+        <td><span class="pill free">免费商用</span></td>
+        <td><a href="https://www.coloros.com/article/A00000050/" target="_blank">OPPO 官方</a></td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="note warn">
+    避坑：<b>微软雅黑不能打包进应用分发</b>——它只允许在 Windows 系统内显示使用，脱离系统商用需向方正买授权。个人本地应用里写 <code class="inline">font-family: "Microsoft YaHei"</code> 调用系统字体没问题，但不要把雅黑文件复制进安装包。苹方（PingFang SC）同理，仅限 Apple 设备系统调用。
+  </div>
+</section>
+
+<!-- ============ 4 标题/个性 ============ -->
+<section id="s4">
+  <h2><span class="no">04</span>中文字体候选（标题 / 个性层）</h2>
+  <p class="lead">标题层是「性格」所在，小面积使用即可显著改变气质。以下均可免费商用。</p>
+  <div class="grid">
+    <div class="card">
+      <h4>得意黑<span class="en">Smiley Sans</span></h4>
+      <div class="tags"><span class="tag green">OFL 1.1</span><span class="tag">窄斜体</span><span class="tag violet">标题专用</span></div>
+      <p class="desc">窄身、微斜、大弧线，融入手绘美术字细节，是近年开源中文标题字体里最有性格的一款。8335 个常用汉字 + 拉丁/西里尔/希腊/假名。GitHub Releases 提供 OTF/TTF/WOFF2 全套，甚至公开 Glyphs 源文件。</p>
+      <div class="links"><a href="https://github.com/atelier-anchor/smiley-sans" target="_blank">GitHub</a><a href="https://atelier-anchor.com/typefaces/smiley-sans" target="_blank">官网</a></div>
+    </div>
+    <div class="card">
+      <h4>思源宋体 Heavy<span class="en">Source Han Serif</span></h4>
+      <div class="tags"><span class="tag green">OFL 1.1</span><span class="tag">衬线标题</span></div>
+      <p class="desc">用思源宋体的粗字重做标题是最安全的「编辑感」方案——像杂志刊头。与思源黑正文天然同源，混排无违和。</p>
+      <div class="links"><a href="https://github.com/adobe-fonts/source-han-serif/releases" target="_blank">GitHub</a></div>
+    </div>
+    <div class="card">
+      <h4>站酷 / 优设免费系<span class="en">站酷高端黑、优设标题黑等</span></h4>
+      <div class="tags"><span class="tag green">免费商用</span><span class="tag violet">力量感标题</span></div>
+      <p class="desc">国产设计社区出品的免费标题字库，笔画粗壮有力，适合强调型大标题。字重单一、字符集较小，只建议做点缀。可在猫啃网/100font 一站收齐。</p>
+      <div class="links"><a href="https://www.maoken.com" target="_blank">猫啃网</a><a href="https://www.100font.com" target="_blank">100font</a></div>
+    </div>
+    <div class="card">
+      <h4>霞鹜漫黑 / 新晰黑<span class="en">LXGW 衍生家族</span></h4>
+      <div class="tags"><span class="tag green">OFL 1.1</span><span class="tag">轻松随感</span></div>
+      <p class="desc">漫黑基于たぬゴ衍生，带圆体手绘感，适合注释、标签等轻松场景；新晰黑是「阅读优化向」黑体，中英文间距调得舒服，可作为思源黑之外的性格化正文备选。</p>
+      <div class="links"><a href="https://github.com/lxgw/LxgwMarkerGothic" target="_blank">漫黑</a><a href="https://github.com/lxgw/LxgwNeoXiHei" target="_blank">新晰黑</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 英文/等宽 ============ -->
+<section id="s5">
+  <h2><span class="no">05</span>英文、数字与等宽字体候选</h2>
+  <p class="lead">中文应用里英文与数字出现频率极高（ID、时间、路径、代码），西文字体的质感直接决定「精致度」。以下全部 OFL 或同等宽松协议，Google Fonts / Fontsource 均可拿到完整家族。</p>
+  <table>
+    <thead><tr><th>字体</th><th>定位</th><th>气质</th><th>授权</th><th>下载</th></tr></thead>
+    <tbody>
+      <tr><td><b>Inter</b></td><td>UI 无衬线</td><td>为屏幕 UI 而生，中性精准，字重/可变齐全，事实标准</td><td><span class="pill ofl">OFL</span></td><td><a href="https://fonts.google.com/specimen/Inter" target="_blank">Google Fonts</a> · <a href="https://rsms.me/inter/" target="_blank">官网</a></td></tr>
+      <tr><td><b>IBM Plex Sans / Serif / Mono</b></td><td>全家桶</td><td>一套同时有无衬线、衬线、等宽，气质理性带人文，适合「工作台」叙事</td><td><span class="pill ofl">OFL</span></td><td><a href="https://www.ibm.com/plex/" target="_blank">IBM 官网</a></td></tr>
+      <tr><td><b>Geist Sans / Mono</b></td><td>UI / 开发者感</td><td>Vercel 出品，冷峻技术感，适合代码型工具</td><td><span class="pill ofl">OFL</span></td><td><a href="https://vercel.com/font" target="_blank">Vercel</a> · Google Fonts</td></tr>
+      <tr><td><b>Manrope</b></td><td>UI 无衬线</td><td>几何圆润，比 Inter 多一点亲和力</td><td><span class="pill ofl">OFL</span></td><td><a href="https://fonts.google.com/specimen/Manrope" target="_blank">Google Fonts</a></td></tr>
+      <tr><td><b>JetBrains Mono</b></td><td>等宽代码</td><td>x 字高大、小号清晰，138 个连字，代码块首选</td><td><span class="pill ofl">OFL</span></td><td><a href="https://www.jetbrains.com/lp/mono/" target="_blank">官网</a></td></tr>
+      <tr><td><b>Fira Code</b></td><td>等宽代码</td><td>连字生态最成熟，基于 Fira Mono</td><td><span class="pill ofl">OFL</span></td><td><a href="https://github.com/tonsky/FiraCode" target="_blank">GitHub</a></td></tr>
+      <tr><td><b>更纱黑体</b><br><span style="color:var(--muted)">Sarasa Gothic / Mono SC</span></td><td>中英等宽</td><td>思源黑汉字 + Iosevka 西文合并，中英文 2:1 严格等宽，终端/表格/代码里中文最整齐的解</td><td><span class="pill ofl">OFL</span></td><td><a href="https://github.com/be5invis/Sarasa-Gothic/releases" target="_blank">GitHub</a></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ 6 授权速查 ============ -->
+<section id="s6">
+  <h2><span class="no">06</span>授权条款速查表</h2>
+  <table>
+    <thead><tr><th>协议 / 条款</th><th>打包进应用</th><th>修改字体</th><th>商用</th><th>典型字体</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pill ofl">SIL OFL 1.1</span></td><td>✅ 允许（含 WOFF 内嵌）</td><td>✅ 允许（衍生需改名）</td><td>✅</td><td>思源黑/宋、霞鹜文楷、得意黑、Inter、MiSans、更纱黑体</td></tr>
+      <tr><td><span class="pill free">厂商免费商用声明</span></td><td>✅ 多数允许</td><td>⛔ 通常不可修改</td><td>✅</td><td>阿里巴巴普惠体、OPPO Sans、站酷系</td></tr>
+      <tr><td><span class="pill free">HarmonyOS Sans 条款</span></td><td>✅ 允许</td><td>⛔ 不可修改</td><td>✅</td><td>HarmonyOS Sans（下载需华为开发者账号）</td></tr>
+      <tr><td><span class="pill restricted">系统随附字体</span></td><td>⛔ 不可复制分发</td><td>⛔</td><td>仅系统内</td><td>微软雅黑、苹方、宋体——只能在 CSS 里按名字调用，不能打包文件</td></tr>
+    </tbody>
+  </table>
+  <div class="note">
+    对个人自用应用，上表所有「✅」行都安全；如果未来要公开发布，优先全用 OFL 字体（第一行），授权最干净、无追溯风险。
+  </div>
+</section>
+
+<!-- ============ 7 判断维度 ============ -->
+<section id="s7">
+  <h2><span class="no">07</span>美学自评维度（判断框架）</h2>
+  <p class="lead">既然美学由你判断，以下 8 个维度是对比候选字体时最该盯着看的地方——建议直接在应用真实界面里 A/B 替换，而不是看字体官网的展示海报。</p>
+  <div class="dims">
+    <div class="dim"><b>字面率与字腔</b><span>字面大（MiSans、OPPO Sans）显得现代饱满；字面小（思源系）更疏朗安静。直接影响同样字号下的「密度感」。</span></div>
+    <div class="dim"><b>重心高低</b><span>重心高的字体（如楷体、部分宋体）显得轻盈古典；重心低且居中（思源黑）更稳定工具感。</span></div>
+    <div class="dim"><b>笔画对比度</b><span>宋体/楷体横细竖粗，有书写性；黑体均匀，克制。对比度高的字体在细线、留白多的界面里更出味道。</span></div>
+    <div class="dim"><b>x-height（西文）</b><span>x 字高大的西文（Inter、JetBrains Mono）小号更清晰；低的（IBM Plex）更优雅。与你中文的灰度要匹配。</span></div>
+    <div class="dim"><b>中英混排基线</b><span>同一行中英文是否「坐」在同一水平线、字号视觉是否等大。MiSans、更纱黑体做过专门优化；混排是工作台类应用最高频场景。</span></div>
+    <div class="dim"><b>数字性格</b><span>看 0/1/6/9 的区分度、是否有表格数字（tabular-nums）。时间戳、计数、ID 多的应用，数字比字母更常出现。</span></div>
+    <div class="dim"><b>小字号渲染</b><span>12–14px 下笔画是否糊、粘连。Windows 下尤其要在真实缩放开真实界面看，不要只看大号样张。</span></div>
+    <div class="dim"><b>字重梯度</b><span>标题/正文/辅助三层能否靠字重拉开（400/500/700）。字重越多（MiSans 10 档、Inter 可变）层级越细腻。</span></div>
+  </div>
+</section>
+
+<!-- ============ 8 技术落地 ============ -->
+<section id="s8">
+  <h2><span class="no">08</span>前端落地技术要点</h2>
+  <p class="lead">知行台是 Electron 本地应用，字体可以完全离线打包，没有加载延迟顾虑，主要关注体积与渲染：</p>
+
+  <h3>1. 本地 @font-face，离线打包</h3>
+<pre><span class="cmt">/* 字体文件放 assets/fonts/，随应用分发 */</span>
+@font-face {
+  font-family: "Noto Sans SC";
+  src: url("assets/fonts/NotoSansSC-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  --font-ui: "Inter", "Noto Sans SC", "PingFang SC", sans-serif;
+  --font-read: "LXGW WenKai", "Noto Serif SC", serif;
+  --font-mono: "JetBrains Mono", "Sarasa Mono SC", monospace;
+}</pre>
+
+  <h3>2. 体积控制：子集化 + WOFF2</h3>
+  <pre><span class="cmt"># 全量思源黑 SC 约 16MB/字重；用 pyftsubset 裁到常用字后可到 1-2MB</span>
+pip install fonttools brotli
+pyftsubset SourceHanSansSC-Regular.otf \
+  --unicodes="U+4E00-9FFF,U+3000-303F,U+FF00-FFEF,U+0020-007E" \
+  --flavor=woff2 --output-file=NotoSansSC-Regular.woff2</pre>
+  <p class="lead" style="margin-top:12px">霞鹜文楷直接选 <b>Lite 版</b>（已剔除罕用字，专为内嵌场景设计）；西文字体本身很小（Inter 单字重 WOFF2 约 100KB），全字重打包也无压力。可变字体（Variable Font）一个文件覆盖全部字重，中文可变版体积也大，谨慎选择。</p>
+
+  <h3>3. 渲染细节</h3>
+  <div class="grid" style="grid-template-columns: 1fr;">
+    <div class="card" style="box-shadow:none">
+      <p class="desc">
+        · 正文中文建议 <code class="inline">letter-spacing: 0</code>，标题中文可微加 0.02–0.05em 呼吸感。<br>
+        · 数字列加 <code class="inline">font-variant-numeric: tabular-nums</code> 对齐（Inter / MiSans 均支持）。<br>
+        · 中英混排在 CSS 里用 font-family 顺序回退即可（西文在前、中文在后），无需 markup 包裹。<br>
+        · Electron（Chromium）默认 DirectWrite 渲染，黑体系在 125%/150% 缩放下表现好；楷体类建议正文不小于 15px。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9 搭配方向 ============ -->
+<section id="s9">
+  <h2><span class="no">09</span>针对知行台风格的三个搭配方向（供你取舍）</h2>
+  <p class="lead">对应 styles.css 里「冷白底 + 细线 + 明亮蓝强调 + 安静工作室」的既有视觉体系，给出三条气质不同的路线，美学判断留给你：</p>
+  <table>
+    <thead><tr><th>方向</th><th>正文/UI</th><th>阅读层</th><th>标题</th><th>等宽</th><th>气质一句话</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>A · 安静编辑感</b><br><span style="color:var(--muted)">贴 Are.na 方向</span></td>
+        <td>思源黑体</td><td>霞鹜文楷</td><td>思源宋体 Bold</td><td>JetBrains Mono</td>
+        <td>教科书级中性 + 楷体温润，最「图书馆」，零风险</td>
+      </tr>
+      <tr>
+        <td><b>B · 现代工具感</b><br><span style="color:var(--muted)">贴 Craft/Linear 方向</span></td>
+        <td>MiSans（含数字优化）</td><td>MiSans + 思源宋引文</td><td>MiSans Demibold</td><td>Geist Mono / JetBrains Mono</td>
+        <td>字面饱满、层级细腻，最「新一代个人软件」</td>
+      </tr>
+      <tr>
+        <td><b>C · 人文工作室</b><br><span style="color:var(--muted)">性格化一点</span></td>
+        <td>霞鹜新晰黑</td><td>霞鹜文楷</td><td>得意黑（小面积）</td><td>更纱黑体 Mono SC</td>
+        <td>手写温度 + 窄斜标题点睛，辨识度最高</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="note">
+    建议操作：三条路线各打包最小字体集（每条约 3–5MB WOFF2），在应用里做一个「字体方案」切换变量，用真实笔记内容对比一周再定稿——字体只有在真实内容里才看得出好坏。
+  </div>
+</section>
+
+<footer>
+  <p>来源：Google Fonts、GitHub（adobe-fonts / lxgw / atelier-anchor / be5invis）、小米 hyperos.mi.com/font、iconfont 阿里普惠体专区、华为开发者设计资源、猫啃网 maoken.com、100font.com、IBM Plex、JetBrains Mono、Vercel Geist。授权条款以各字体官方页面最新版本为准，商用发布前请复核一次。</p>
+</footer>
+
+</div>
+</body>
+</html>

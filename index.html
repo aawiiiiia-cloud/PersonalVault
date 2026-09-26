@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>个人知识工作台</title>
+  <link rel="stylesheet" href="assets/fonts/fonts.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="desktop-titlebar" aria-hidden="true">
+    <span>个人知识工作台</span>
+  </div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">知</div>
+        <div><strong>知行台</strong><span>方法论驱动的知识工作台</span></div>
+      </div>
+
+      <button class="capture-button" id="quickCapture">＋ 新建随手记</button>
+      <button class="asset-import-button" id="openAssetImport">＋ 导入文件</button>
+
+      <nav id="mainNav" aria-label="主导航">
+        <button class="nav-item active" data-view="home"><span>⌂</span>工作台</button>
+        <button class="nav-item" data-view="inbox"><span>⌁</span>随手记 <em id="inboxCount">0</em></button>
+
+        <button class="nav-item" data-view="areas"><span>◎</span>领域</button>
+        <div id="areaNavList" class="area-nav-list"></div>
+
+        <p class="nav-subsection-label">查看</p>
+        <button class="nav-item" data-view="graph"><span>⌘</span>关系图谱</button>
+
+        <p class="nav-subsection-label">全部内容</p>
+        <button class="nav-item sub" data-view="projects"><span>◇</span>项目</button>
+        <button class="nav-item sub" data-view="knowledge"><span>✦</span>知识</button>
+        <button class="nav-item sub" data-view="sources"><span>▤</span>资料</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="nav-item nav-item-system" data-view="trash"><span>♲</span>回收站 <em id="trashCount">0</em></button>
+        <button id="openDataManager">数据管理</button>
+        <button id="resetDemo">重置演示数据</button>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="viewEyebrow">2026 · 个人知识系统</p>
+          <h1 id="viewTitle">今天，把经历变成方法</h1>
+        </div>
+        <div class="search-wrap">
+          <input id="searchInput" type="search" placeholder="搜索项目、知识与资料…">
+          <button id="clearSearch" class="clear-search hidden" type="button" aria-label="退出搜索">×</button>
+          <kbd>Ctrl K</kbd>
+        </div>
+      </header>
+
+      <section id="homeView" class="view active">
+        <div class="hero">
+          <div>
+            <span class="date-pill" id="todayLabel"></span>
+            <h2>知识不是收藏，<br><i>是下一次行动的起点。</i></h2>
+            <p>从真实问题出发，保留来源，完成复盘，只提炼真正能复用的结论。</p>
+          </div>
+          <div class="method-loop" aria-label="知识循环">
+            <div><b>01</b><span>捕获</span></div><i>→</i>
+            <div><b>02</b><span>实践</span></div><i>→</i>
+            <div><b>03</b><span>复盘</span></div><i>→</i>
+            <div><b>04</b><span>提炼</span></div>
+          </div>
+        </div>
+
+        <div class="section-heading">
+          <div><span>开始行动</span><h3>你现在想做什么？</h3></div>
+        </div>
+        <div class="action-grid">
+          <button class="action-card terracotta" data-create="capture"><span>01</span><div><b>新建随手记</b><small>先收下来，稍后分类</small></div><i>↗</i></button>
+          <button class="action-card blue" data-create="project"><span>02</span><div><b>开始一个项目</b><small>从目标和成功标准开始</small></div><i>↗</i></button>
+          <button class="action-card ochre" data-open-project-review><span>03</span><div><b>完成一次项目复盘</b><small>先选择对应项目，再沉淀经验</small></div><i>↗</i></button>
+          <button class="action-card green" data-create="knowledge"><span>04</span><div><b>提炼一条知识</b><small>形成可复用的判断</small></div><i>↗</i></button>
+        </div>
+
+        <div class="dashboard-grid">
+          <section class="panel">
+            <div class="panel-head"><div><span>尚未决定正式类型</span><h3>随手记</h3></div><button data-view-link="inbox">查看全部 →</button></div>
+            <div id="inboxPreview" class="stack-list"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div><span>正在发生</span><h3>进行中的项目</h3></div><button data-view-link="projects">项目列表 →</button></div>
+            <div id="projectPreview" class="stack-list"></div>
+          </section>
+        </div>
+
+        <section class="principle-strip">
+          <span>本周原则</span>
+          <blockquote>“先给问题起一个通用名字，再决定复用什么、自己做什么。”</blockquote>
+          <small>来自：工具项目复盘</small>
+        </section>
+      </section>
+
+      <section id="collectionView" class="view">
+        <div class="collection-toolbar">
+          <div class="collection-filters">
+            <div class="filter-row" id="filterRow"></div>
+            <label id="collectionAreaFilterWrap" class="collection-area-filter hidden" for="collectionAreaFilter">
+              <span>按领域查看</span>
+              <select id="collectionAreaFilter"><option value="all">全部领域</option></select>
+            </label>
+          </div>
+          <div class="collection-actions">
+            <div id="sourceDisplayToggle" class="display-toggle hidden" aria-label="资料呈现方式">
+              <button type="button" data-source-display="gallery">画廊</button>
+              <button type="button" data-source-display="list">列表</button>
+            </div>
+            <button type="button" class="outline-small hidden" id="sourceBatchToggle">批量整理</button>
+            <div class="context-create-wrap">
+              <button class="primary-small" id="collectionCreate">＋ 新建</button>
+              <div id="contextCreateMenu" class="context-create-menu hidden">
+                <button data-context-create="project"><b>项目</b><small>有明确结果的实践</small></button>
+                <button data-context-create="knowledge"><b>知识</b><small>可以复用的判断</small></button>
+                <button data-context-create="source"><b>资料</b><small>外部输入与证据</small></button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <section id="sourceBatchBar" class="source-batch-bar hidden" aria-label="资料批量整理">
+          <div class="source-batch-selection">
+            <div class="source-batch-section-heading"><div><span>选择</span><b>已选择 <strong id="sourceBatchCount">0</strong> 份资料</b></div><p>批量操作只会影响当前仍然可见的选择。</p></div>
+            <div class="source-batch-selection-actions"><button type="button" id="sourceBatchSelectVisible">全选当前显示的 0 份资料</button><button type="button" id="sourceBatchClear">清除选择</button><button type="button" id="sourceBatchExit">结束批量整理</button></div>
+          </div>
+          <div class="source-batch-groups">
+            <section class="source-batch-group source-batch-area-action">
+              <div class="source-batch-section-heading"><div><span>领域操作</span><b>调整所属领域</b></div><p>先选择领域，再决定添加到所选资料，或从所选资料移除。</p></div>
+              <span class="source-batch-field-label">要操作的领域</span>
+              <div id="sourceBatchAreaChoices" class="source-batch-area-choices"></div>
+              <div class="source-batch-group-actions"><button type="button" id="sourceBatchAddAreas">添加到所选资料</button><button type="button" id="sourceBatchRemoveAreas">从所选资料移除</button></div>
+            </section>
+            <section class="source-batch-group source-batch-reading-action">
+              <div class="source-batch-section-heading"><div><span>状态操作</span><b>修改阅读状态</b></div></div>
+              <label for="sourceBatchReadingStatus">阅读状态</label>
+              <select id="sourceBatchReadingStatus"><option value="unread">未读</option><option value="reading">处理中</option><option value="processed">已处理</option></select>
+              <button type="button" id="sourceBatchSetReadingStatus">应用到所选资料</button>
+            </section>
+            <section class="source-batch-group source-batch-danger">
+              <div class="source-batch-section-heading"><div><span>危险操作</span><b>移到回收站</b></div></div>
+              <p>将影响 <strong id="sourceBatchTrashCount">0</strong> 份资料；原始资产不会删除。</p>
+              <button type="button" class="source-batch-trash" id="sourceBatchTrash">将所选资料移到回收站</button>
+            </section>
+          </div>
+          <p id="sourceBatchFeedback" class="source-batch-feedback"></p>
+        </section>
+        <section id="advancedSearchPanel" class="advanced-search-panel hidden" aria-label="组合筛选">
+          <div class="search-filter-head">
+            <div><b>组合筛选</b><span>文字搜索与这些条件会同时生效</span></div>
+            <span id="searchEngineBadge" class="search-engine-badge">检查索引中</span>
+          </div>
+          <div class="search-filter-grid">
+            <label>检索方式<select id="searchModeFilter"><option value="exact">精确检索</option><option value="hybrid">精确＋语义</option></select></label>
+            <label>内容类型<select id="searchTypeFilter"><option value="">全部内容</option><option value="project">项目</option><option value="knowledge">知识</option><option value="source">资料</option></select></label>
+            <label>所属领域<select id="searchAreaFilter"><option value="">全部领域</option></select></label>
+            <label>文件格式<select id="searchFormatFilter"><option value="">全部格式</option></select></label>
+            <label>内容状态<select id="searchStatusFilter"><option value="">全部状态</option><option value="active">进行中</option><option value="paused">暂停</option><option value="done">已完成</option><option value="draft">待验证</option><option value="reviewed">已确认</option><option value="evergreen">长期有效</option><option value="unread">未读</option><option value="reading">处理中</option><option value="processed">已处理</option></select></label>
+            <label>修改日期从<input id="searchDateFrom" type="date"></label>
+            <label>修改日期到<input id="searchDateTo" type="date"></label>
+            <label>最短时长（秒）<input id="searchMinDuration" type="number" min="0" step="1" placeholder="不限"></label>
+            <label>最长时长（秒）<input id="searchMaxDuration" type="number" min="0" step="1" placeholder="不限"></label>
+          </div>
+          <button type="button" class="clear-search-filters" id="clearSearchFilters">清除筛选条件</button>
+        </section>
+        <div id="collectionStats" class="stats-row"></div>
+        <div id="collectionList" class="collection-list"></div>
+        <div id="emptyState" class="empty-state hidden"><b>这里还没有内容</b><span>从一次真实记录开始，不必先设计完整体系。</span></div>
+      </section>
+
+      <section id="graphView" class="view graph-view" aria-label="关系图谱">
+        <div class="graph-toolbar">
+          <div class="graph-type-filters" id="graphTypeFilters" aria-label="内容类型筛选">
+            <label><input type="checkbox" value="project" checked><span>项目</span></label>
+            <label><input type="checkbox" value="knowledge" checked><span>知识</span></label>
+            <label><input type="checkbox" value="source" checked><span>资料</span></label>
+          </div>
+          <label class="graph-area-filter">领域<select id="graphAreaFilter"><option value="">全部领域</option></select></label>
+          <div class="graph-search">
+            <input id="graphTitleSearch" type="search" placeholder="按标题定位节点">
+            <button type="button" id="graphLocateNode">定位</button>
+          </div>
+          <button type="button" class="outline-small" id="graphResetView">恢复默认视角</button>
+        </div>
+        <div class="graph-summary">
+          <span><b id="graphNodeCount">0</b> 个节点</span>
+          <span><b id="graphEdgeCount">0</b> 条连线</span>
+          <small id="graphSearchFeedback">图谱只读取现有关系，不会修改卡片。</small>
+        </div>
+        <div class="graph-workspace">
+          <div class="graph-canvas-wrap">
+            <canvas id="graphCanvas" tabindex="0" aria-label="关系图谱画布"></canvas>
+            <div id="graphEmpty" class="graph-empty hidden"><b>当前筛选下没有节点</b><span>调整类型或领域筛选后再查看。</span></div>
+            <div class="graph-legend" aria-hidden="true"><span class="project">项目</span><span class="knowledge">知识</span><span class="source">资料</span></div>
+          </div>
+          <aside class="graph-inspector" id="graphInspector">
+            <span class="graph-inspector-kicker">当前选择</span>
+            <h2>选择一个节点</h2>
+            <p>点击节点查看它的领域和直接关联。拖动节点只会保存为本机界面偏好。</p>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="viewerDialog" class="viewer-dialog card-resizable" data-dialog-size="viewer">
+    <div class="dialog-head">
+      <div class="viewer-heading"><div id="viewerMeta" class="main-card-meta hidden"></div><span id="viewerKicker">查看</span><h2 id="viewerTitle">内容</h2></div>
+      <div class="dialog-head-tools"><button type="button" class="dialog-size-reset" data-reset-dialog-size="viewer" title="恢复阅读窗口默认大小">恢复默认大小</button><div class="main-head-button-stack"><div class="main-head-nav"><button type="button" class="viewer-back hidden" id="viewerBack">← 返回</button><button type="button" class="icon-button" id="closeViewer" aria-label="关闭">×</button></div><button type="button" class="secondary main-head-action hidden" id="editViewedEntryTop">编辑</button></div></div>
+      <div id="viewerMainInfo" class="main-card-info hidden"></div>
+    </div>
+    <div id="viewerMainRelations" class="main-card-relations hidden"></div>
+    <div id="viewerMarkdownToolbar" class="main-markdown-toolbar hidden"></div>
+    <div id="viewerBody" class="viewer-body"></div>
+    <div class="dialog-actions viewer-actions">
+      <p>阅读模式不会误改内容。</p>
+      <div><button type="button" class="secondary hidden" id="startProjectReview">写项目复盘</button><button type="button" class="secondary" id="closeViewerBottom">关闭</button><button type="button" class="primary" id="editViewedEntry">编辑</button></div>
+    </div>
+    <div class="card-resize-handle" data-resize-direction="n" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="s" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="w" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="e" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="nw" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="ne" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="sw" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="se" aria-hidden="true"></div>
+  </dialog>
+
+  <dialog id="editorDialog" class="card-resizable" data-dialog-size="editor">
+    <form id="editorForm" method="dialog">
+      <div class="dialog-head">
+        <div class="editor-heading"><div id="formMeta" class="main-card-meta hidden"></div><span id="formKicker">新建</span><h2 id="formTitle">随手记</h2><input id="mainTitleInput" class="main-title-input hidden" name="title" aria-label="卡片标题" disabled></div>
+        <div class="dialog-head-tools"><button type="button" class="dialog-size-reset" data-reset-dialog-size="editor" title="恢复编辑窗口默认大小">恢复默认大小</button><div class="main-head-button-stack"><div class="main-head-nav"><button type="button" class="secondary main-head-action hidden" id="mainCancelTop">取消</button><button type="button" class="icon-button" id="closeDialog" aria-label="关闭">×</button></div><button type="button" class="primary main-head-action hidden" id="mainSaveTop">保存</button></div></div>
+        <div id="editorMainInfo" class="main-card-info hidden"></div>
+      </div>
+      <div id="editorMainRelations" class="main-card-relations hidden"></div>
+      <div id="editorMarkdownToolbar" class="main-markdown-toolbar hidden"></div>
+      <div id="formFields" class="form-fields"></div>
+      <div class="dialog-actions">
+        <p id="formHint">先记录，不要求完整。</p>
+        <div><button type="button" class="secondary hidden" id="restoreEntry">恢复</button><button type="button" class="secondary hidden" id="permanentDelete">永久删除</button><button type="button" class="secondary" id="deleteEntry">移到回收站</button><button type="button" class="secondary" id="cancelEdit">取消</button><button type="submit" class="primary" id="saveEntry">保存</button></div>
+      </div>
+    </form>
+    <div id="richColorPalette" class="rich-color-palette hidden"></div>
+    <div id="richImageControls" class="rich-image-controls hidden"><button type="button" data-image-drag aria-label="拖动图片">⋮⋮</button><button type="button" data-image-layout-option="full">大图</button><button type="button" data-image-layout-option="left">靠左</button><button type="button" data-image-layout-option="right">靠右</button><button type="button" data-image-delete aria-label="删除图片">删除</button></div>
+    <div id="imageDropPreview" class="image-drop-preview hidden" aria-hidden="true"></div>
+    <div class="card-resize-handle" data-resize-direction="n" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="s" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="w" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="e" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="nw" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="ne" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="sw" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="se" aria-hidden="true"></div>
+  </dialog>
+
+  <dialog id="inlineImageDialog" class="inline-image-dialog">
+    <div class="inline-image-tools"><button type="button" id="inlineImageZoomOut" aria-label="缩小图片">−</button><span id="inlineImageZoomLabel">100%</span><button type="button" id="inlineImageZoomIn" aria-label="放大图片">＋</button><button type="button" id="inlineImageZoomReset" aria-label="恢复图片大小">还原</button><button type="button" id="closeInlineImage" aria-label="关闭图片预览">×</button></div>
+    <div id="inlineImageStage" class="inline-image-stage"><img id="inlineImageFull" alt="图片预览"></div>
+  </dialog>
+
+  <dialog id="dataDialog" class="data-dialog">
+    <div class="dialog-head">
+      <div><span>DATA · 数据基础</span><h2>数据管理</h2></div>
+      <button type="button" class="icon-button" id="closeDataDialog" aria-label="关闭">×</button>
+    </div>
+    <div class="data-manager-body">
+      <section class="data-status-card">
+        <div><span>当前数据版本</span><b id="dataSchemaVersion">v1</b></div>
+        <div><span>卡片数量</span><b id="dataEntryCount">0</b></div>
+        <div><span>真实关联</span><b id="dataReferenceCount">0</b></div>
+      </section>
+
+      <section class="data-section">
+        <div class="data-section-head"><div><b>完整性检查</b><p>检查重复ID、无法识别的类型和已经失效的关联。</p></div><button type="button" class="outline-small" id="runDataCheck">重新检查</button></div>
+        <div id="dataHealthReport" class="data-health-report"></div>
+      </section>
+
+      <section class="data-section vault-section">
+        <div class="data-section-head"><div><b>移动硬盘知识库</b><p id="vaultPathLabel">正在检查 E:\PersonalVault…</p></div><span id="vaultStatusBadge" class="vault-badge checking">检查中</span></div>
+        <p class="vault-explanation">写入后，每张卡片会成为移动硬盘中的独立 Markdown 文件；现阶段仍保留浏览器副本，便于核对迁移结果。</p>
+        <div class="vault-actions"><button type="button" class="outline-small" id="refreshVaultStatus">重新检查</button><button type="button" class="primary" id="syncCardsToVault">把当前卡片写入移动硬盘</button></div>
+        <div id="vaultResult" class="data-health-report"></div>
+      </section>
+
+      <section class="data-section index-section">
+        <div class="data-section-head"><div><b>SQLite 搜索目录</b><p>它只负责快速检索，可以随时从卡片重新生成，不是唯一数据副本。</p></div><span id="indexStatusBadge" class="vault-badge checking">检查中</span></div>
+        <div id="indexStatusDetails" class="data-health-report"></div>
+        <div class="vault-actions"><button type="button" class="outline-small" id="refreshIndexStatus">重新检查</button><button type="button" class="primary" id="rebuildSearchIndex">一键重建搜索目录</button></div>
+      </section>
+
+      <section class="data-section semantic-section">
+        <div class="data-section-head"><div><b>本地语义目录</b><p>用本地模型理解“意思相近但字面不同”的搜索；模型与索引都随知识库保存在移动硬盘。</p></div><span id="semanticStatusBadge" class="vault-badge checking">检查中</span></div>
+        <div class="semantic-settings">
+          <label>语义模型<select id="semanticModelSelect"><option value="multilingual-e5-base-q8">Multilingual E5 Base · 多语言均衡</option><option value="bge-small-zh-v1.5-q8">BGE Small 中文 · 旧版回退</option></select></label>
+          <label>运行设备<select id="semanticDeviceSelect"><option value="auto">自动选择 GPU / CPU</option><option value="gpu">优先使用 GPU</option><option value="cpu">只使用 CPU</option></select></label>
+        </div>
+        <div id="semanticStatusDetails" class="data-health-report"></div>
+        <p class="semantic-note">默认使用约 278MB 的 E5 Base Q8 多语言模型。模型只准备一次，Windows 与 Mac 共用；以后新增模型时会建立自己的独立索引，不会覆盖其他模型。</p>
+        <div class="vault-actions"><button type="button" class="outline-small" id="refreshSemanticStatus">重新检查</button><button type="button" class="primary" id="rebuildSemanticIndex">准备模型并建立目录</button></div>
+      </section>
+
+      <section class="data-section">
+        <b>迁移与留存</b>
+        <p>JSON迁移包保留全部字段和关联，可用于以后导入桌面版；Markdown用于人直接阅读。</p>
+        <div class="data-action-grid">
+          <button type="button" id="exportBundle" class="data-action primary-data"><b>导出完整迁移包</b><span>.kwb.json · 推荐</span></button>
+          <button type="button" id="exportData" class="data-action"><b>导出可读 Markdown</b><span>.md · 阅读副本</span></button>
+          <button type="button" id="chooseImport" class="data-action"><b>导入迁移包</b><span>导入前先检查内容</span></button>
+          <input type="file" id="importBundleFile" accept=".json,.kwb.json,application/json" hidden>
+        </div>
+      </section>
+
+      <section id="importPreview" class="data-section import-preview hidden">
+        <b>导入预览</b>
+        <p id="importPreviewSummary"></p>
+        <div id="importPreviewIssues" class="data-health-report"></div>
+        <div class="import-actions"><button type="button" class="secondary" id="cancelImport">取消</button><button type="button" class="primary" id="confirmImport">确认替换当前数据</button></div>
+      </section>
+    </div>
+    <div class="dialog-actions data-dialog-footer">
+      <p>桌面版会自动同步移动硬盘；迁移包仍是跨版本恢复与人工备份的安全出口。</p>
+      <div><button type="button" class="primary" id="doneDataDialog">完成</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="assetImportDialog" class="asset-import-dialog">
+    <div class="dialog-head">
+      <div><span>ASSET · 文件入库</span><h2>导入本地文件</h2></div>
+      <button type="button" class="icon-button" id="closeAssetImport" aria-label="关闭">×</button>
+    </div>
+    <div class="asset-import-body">
+      <p class="asset-intro">选择文件如何进入知识库。系统会先计算内容指纹：完全相同的文件不会重复复制，同名但内容不同的文件会自动保留为“名称 (2)”。</p>
+      <div class="import-mode-grid">
+        <label class="import-mode selected"><input type="radio" name="assetMode" value="copy" checked><b>复制进知识库</b><span>推荐。原文件保留，知识库中产生一份独立副本。</span></label>
+        <label class="import-mode"><input type="radio" name="assetMode" value="move"><b>移动到知识库</b><span>复制并核对成功后删除原文件；必须由你明确选择。</span></label>
+        <label class="import-mode"><input type="radio" name="assetMode" value="register"><b>保留原路径</b><span>不复制文件，只登记当前位置；以后移动文件需要重新关联。</span></label>
+      </div>
+      <div id="assetImportAvailability" class="health-line warning">正在检查桌面能力……</div>
+      <div id="assetImportResult" class="data-health-report"></div>
+    </div>
+    <div class="dialog-actions">
+      <p>可一次选择多个文件；第一版暂不导入整个文件夹。</p>
+      <div><button type="button" class="secondary" id="cancelAssetImport">取消</button><button type="button" class="primary" id="chooseAssetFiles">选择文件并导入</button></div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="card-v2.js"></script>
+  <script src="card-markdown.js"></script>
+  <script src="data-layer.js"></script>
+  <script src="content-relations.js"></script>
+  <script src="dialog-resize.js"></script>
+  <script src="media-lifecycle.js"></script>
+  <script src="graph-data.js"></script>
+  <script src="graph-canvas.js"></script>
+  <script src="source-batch.js"></script>
+  <script src="collection-filter.js"></script>
+  <script src="semantic-search-flow.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

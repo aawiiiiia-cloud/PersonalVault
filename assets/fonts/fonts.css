@@ -1,0 +1,48 @@
+/* ============================================================
+   知行台 · 本地字体汇总（方案 A · 安静编辑感，标题 700）
+   用法：index.html 中 <link rel="stylesheet" href="assets/fonts/fonts.css">
+
+   字体栈（对应 styles.css 的变量）：
+     --font-ui:      "Inter", "Noto Sans SC", sans-serif;   /* 界面 */
+     --font-display: "Noto Serif SC", serif;                /* 标题 600/700 */
+     --font-read:    "LXGW WenKai", serif;                  /* 长文阅读层 */
+     --font-mono:    "JetBrains Mono", "Noto Sans SC", monospace; /* 时间戳/计数/ID */
+     --font-accent:  "IBM Plex Serif", serif;               /* 标题内西文斜体点缀 */
+
+   全部为子集化 WOFF2（思源黑为可变 TTF 单文件），按需加载，可离线分发。
+   授权：全部 OFL 1.1 / 免费商用，各字体目录内 LICENSE 需随应用保留。
+   ============================================================ */
+
+/* ---- 思源宋体 Noto Serif SC（标题，600 / 700） ---- */
+@import "./noto-serif-sc/600.css";
+@import "./noto-serif-sc/700.css";
+
+/* ---- 思源黑体 Noto Sans SC（可变字重单文件 100–900） ---- */
+@font-face {
+  font-family: "Noto Sans SC";
+  src: url("./NotoSansSC-Variable.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---- 霞鹜文楷 LXGW WenKai（阅读层，Light/Regular/Bold + Mono） ---- */
+@import "./lxgw-wenkai/style.css";
+
+/* ---- Inter（西文 UI / 数字，tabular-nums 支持） ---- */
+@import "./inter/400.css";
+@import "./inter/500.css";
+@import "./inter/600.css";
+@import "./inter/800.css";
+
+/* ---- JetBrains Mono（代码 / 时间戳 / ID） ---- */
+@import "./jetbrains-mono/400.css";
+@import "./jetbrains-mono/500.css";
+@import "./jetbrains-mono/600.css";
+
+/* ---- IBM Plex Serif（标题内西文斜体混排，Craft 手法） ---- */
+@import "./ibm-plex-serif/400.css";
+@import "./ibm-plex-serif/500.css";
+@import "./ibm-plex-serif/600.css";
+@import "./ibm-plex-serif/400-italic.css";
+@import "./ibm-plex-serif/500-italic.css";

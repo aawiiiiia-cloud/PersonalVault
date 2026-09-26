@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>个人知识工作台｜完整待办清单</title>
+  <style>
+    :root {
+      --paper: #f4f1e9;
+      --panel: #fbfaf6;
+      --ink: #1f2923;
+      --muted: #6f746d;
+      --line: #d6d2c7;
+      --accent: #bd5b3d;
+      --green: #315b45;
+      --amber: #9a6a22;
+      --blue: #49677d;
+      --violet: #665b83;
+      --shadow: 0 18px 48px rgba(31, 41, 35, .10);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 90% 0%, rgba(189, 91, 61, .08), transparent 28rem),
+        var(--paper);
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      line-height: 1.65;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+
+    .shell {
+      width: min(1440px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 34px 0 80px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(300px, .7fr);
+      gap: 22px;
+      padding: 32px;
+      border: 1px solid var(--line);
+      background: rgba(251, 250, 246, .86);
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 {
+      margin-bottom: 12px;
+      font-family: Georgia, "Songti SC", serif;
+      font-size: clamp(36px, 6vw, 74px);
+      line-height: 1.02;
+      font-weight: 500;
+      letter-spacing: -.04em;
+    }
+
+    .lede { max-width: 760px; margin-bottom: 0; color: #4d554f; font-size: 17px; }
+    .principle {
+      align-self: stretch;
+      padding: 22px;
+      border-left: 4px solid var(--green);
+      background: #e7ece5;
+    }
+    .principle strong { display: block; margin-bottom: 8px; font-size: 14px; }
+    .principle p { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 20px; line-height: 1.55; }
+
+    .overview {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 18px 0;
+    }
+    .metric { padding: 18px; border: 1px solid var(--line); background: var(--panel); }
+    .metric b { display: block; font-family: Georgia, serif; font-size: 34px; line-height: 1; }
+    .metric span { color: var(--muted); font-size: 12px; }
+
+    .layout { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 20px; align-items: start; }
+    .sidebar {
+      position: sticky;
+      top: 18px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .sidebar h2 { margin-bottom: 12px; font-size: 15px; }
+    .nav-list { display: grid; gap: 4px; margin-bottom: 18px; }
+    .nav-list a { padding: 7px 9px; color: var(--muted); text-decoration: none; font-size: 13px; }
+    .nav-list a:hover { color: var(--ink); background: #efede6; }
+
+    .controls { display: grid; gap: 10px; }
+    .controls input, .controls select {
+      width: 100%;
+      padding: 10px 11px;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      background: white;
+      outline: none;
+    }
+    .controls input:focus, .controls select:focus { border-color: var(--green); }
+    .button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .button-row button, .export-button {
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      background: transparent;
+    }
+    .button-row button:hover, .export-button:hover { border-color: var(--ink); }
+    .export-button { width: 100%; margin-top: 8px; background: var(--ink); color: white; border-color: var(--ink); }
+    .storage-note { margin: 10px 0 0; color: var(--muted); font-size: 11px; }
+
+    main { min-width: 0; }
+    .roadmap-section { margin-bottom: 26px; border: 1px solid var(--line); background: rgba(251, 250, 246, .72); }
+    .section-head {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 14px;
+      align-items: center;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    .phase-no {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      color: white;
+      background: var(--ink);
+      font-family: Georgia, serif;
+      font-size: 17px;
+    }
+    .section-head h2 { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 25px; font-weight: 500; }
+    .section-head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+    .phase-tag { padding: 5px 9px; border: 1px solid var(--line); color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+    .tasks { display: grid; }
+    .task {
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr) auto;
+      gap: 12px;
+      padding: 17px 20px;
+      border-bottom: 1px solid var(--line);
+      transition: background .15s ease;
+    }
+    .task:last-child { border-bottom: 0; }
+    .task:hover { background: rgba(255,255,255,.65); }
+    .task[hidden] { display: none; }
+    .task input[type="checkbox"] { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--green); }
+    .task h3 { margin: 0 0 4px; font-size: 15px; }
+    .task p { margin: 0; color: var(--muted); font-size: 13px; }
+    .task.done h3 { text-decoration: line-through; text-decoration-color: #9aa19a; color: #7e847f; }
+    .task.done p { opacity: .65; }
+    .badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; max-width: 235px; }
+    .badge { padding: 3px 7px; border: 1px solid var(--line); color: var(--muted); background: var(--panel); font-size: 10px; white-space: nowrap; }
+    .badge.user { color: var(--accent); border-color: rgba(189, 91, 61, .35); }
+    .badge.agent { color: var(--green); border-color: rgba(49, 91, 69, .35); }
+    .badge.hard { color: var(--violet); border-color: rgba(102, 91, 131, .35); }
+
+    .decision-grid, .architecture-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      padding: 18px;
+    }
+    .decision, .layer { padding: 16px; border: 1px solid var(--line); background: var(--panel); }
+    .decision b, .layer b { display: block; margin-bottom: 5px; }
+    .decision p, .layer p { margin: 0; color: var(--muted); font-size: 13px; }
+    .layer small { color: var(--accent); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+
+    .legend { display: grid; gap: 7px; margin-top: 18px; color: var(--muted); font-size: 12px; }
+    .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 7px; border-radius: 50%; }
+    .hidden-section { display: none; }
+    .empty { display: none; padding: 36px; border: 1px dashed var(--line); text-align: center; color: var(--muted); }
+
+    footer { margin-top: 26px; padding: 22px 0; color: var(--muted); font-size: 12px; text-align: center; }
+
+    @media (max-width: 980px) {
+      .hero, .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .overview { grid-template-columns: repeat(2, 1fr); }
+      .nav-list { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .shell { width: min(100% - 20px, 1440px); padding-top: 10px; }
+      .hero { padding: 22px; }
+      .overview, .decision-grid, .architecture-grid { grid-template-columns: 1fr; }
+      .nav-list { grid-template-columns: repeat(2, 1fr); }
+      .section-head { grid-template-columns: auto 1fr; }
+      .phase-tag { grid-column: 2; justify-self: start; }
+      .task { grid-template-columns: 28px 1fr; }
+      .badges { grid-column: 2; justify-content: flex-start; max-width: none; }
+    }
+
+    @media print {
+      body { background: white; }
+      .shell { width: 100%; padding: 0; }
+      .sidebar { display: none; }
+      .layout, .hero { display: block; }
+      .hero, .roadmap-section { box-shadow: none; break-inside: avoid; }
+      .overview { grid-template-columns: repeat(4, 1fr); }
+      .task { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Personal Knowledge Workbench · Roadmap</p>
+        <h1>完整待办清单</h1>
+        <p class="lede">从当前纯文本原型，逐步发展为由移动硬盘承载、同时管理文字与各类资产、支持精确检索和本地语义检索的个人知识工作台。本文档记录实施顺序、依赖关系、分工和验收标准。</p>
+      </div>
+      <aside class="principle">
+        <strong>总设计原则</strong>
+        <p>人工判断是核心，AI只做可选择、可复核的辅助；原始内容和卡片记录长期保存，数据库与向量索引随时可以重建。</p>
+      </aside>
+    </header>
+
+    <section class="overview" aria-label="进度总览">
+      <div class="metric"><b id="totalCount">0</b><span>总任务</span></div>
+      <div class="metric"><b id="doneCount">0</b><span>已完成</span></div>
+      <div class="metric"><b id="activeCount">0</b><span>当前与近期</span></div>
+      <div class="metric"><b id="progressCount">0%</b><span>整体完成度</span></div>
+    </section>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <h2>路线导航</h2>
+        <nav class="nav-list">
+          <a href="#architecture">基础架构</a>
+          <a href="#phase-0">0 · 已有原型</a>
+          <a href="#phase-1">1 · 数据落地</a>
+          <a href="#phase-2">2 · 文件入库</a>
+          <a href="#phase-3">3 · 精确检索</a>
+          <a href="#phase-4">4 · 语义检索</a>
+          <a href="#phase-5">5 · 媒体呈现</a>
+          <a href="#phase-6">6 · AI辅助</a>
+          <a href="#phase-7">7 · 关系与节点</a>
+          <a href="#phase-8">8 · 可靠性</a>
+          <a href="#phase-9">9 · 视觉体验</a>
+          <a href="#phase-10">10 · 3D场景</a>
+          <a href="#decisions">待确认事项</a>
+        </nav>
+
+        <div class="controls">
+          <input id="search" type="search" placeholder="搜索任务……" aria-label="搜索任务">
+          <select id="phaseFilter" aria-label="按阶段筛选">
+            <option value="all">全部阶段</option>
+            <option value="now">当前与近期</option>
+            <option value="later">中后期</option>
+            <option value="future">远期探索</option>
+            <option value="done">已有原型</option>
+          </select>
+          <select id="ownerFilter" aria-label="按负责人筛选">
+            <option value="all">全部负责人</option>
+            <option value="user">需要你判断</option>
+            <option value="agent">Agent实现</option>
+            <option value="both">共同完成</option>
+          </select>
+          <div class="button-row">
+            <button id="showOpen" type="button">只看未完成</button>
+            <button id="resetFilters" type="button">清除筛选</button>
+          </div>
+          <button class="export-button" id="exportProgress" type="button">导出进度记录</button>
+        </div>
+        <p class="storage-note">勾选状态会保存在当前浏览器中；“导出进度记录”可额外保存一份 JSON 备份。</p>
+        <div class="legend">
+          <span><i style="background:var(--accent)"></i>你：偏好、内容与验收</span>
+          <span><i style="background:var(--green)"></i>Agent：技术设计与实现</span>
+          <span><i style="background:var(--violet)"></i>难度高：需先完成前置阶段</span>
+        </div>
+      </aside>
+
+      <main>
+        <section class="roadmap-section" id="architecture">
+          <div class="section-head">
+            <span class="phase-no">A</span>
+            <div><h2>最终基础架构</h2><p>五层分工，保证以后换技术也不丢内容。</p></div>
+            <span class="phase-tag">已经明确</span>
+          </div>
+          <div class="architecture-grid">
+            <div class="layer"><small>01 · 原始内容</small><b>真正的文件</b><p>文字、图片、视频、音频、文档、3D模型、Blender/UE工程及其他资产。</p></div>
+            <div class="layer"><small>02 · 卡片记录</small><b>人工整理成果</b><p>标题、项目/知识/资料类型、领域、说明、标签、状态、关联关系和相对路径。</p></div>
+            <div class="layer"><small>03 · SQLite</small><b>精确目录</b><p>负责关键词、全文搜索、筛选、排序和统计；损坏后可以从卡片重建。</p></div>
+            <div class="layer"><small>04 · 向量索引</small><b>语义目录</b><p>负责“建模”找到“3D雕塑”这类意思相近的搜索；也可以重新生成。</p></div>
+            <div class="layer"><small>05 · 工作台</small><b>统一操作界面</b><p>负责记录、导入、整理、浏览、搜索、关系图谱、节点画布及未来的3D空间入口。</p></div>
+            <div class="layer"><small>边界</small><b>现阶段不引入NAS</b><p>完整知识库由一块移动硬盘承载，Windows和Mac依次使用，不做多设备同时写入。</p></div>
+          </div>
+        </section>
+
+        <section class="roadmap-section" id="phase-0" data-group="done">
+          <div class="section-head"><span class="phase-no">0</span><div><h2>已有原型与已验证方向</h2><p>这些能力已经存在，但后续仍可能随着新架构迁移或重做。</p></div><span class="phase-tag">已完成 / 原型</span></div>
+          <div class="tasks">
+            <article class="task" data-id="p0-1" data-phase="done" data-owner="agent"><input type="checkbox" checked><div><h3>建立工作台、随手记、领域、项目、知识、资料的基础结构</h3><p>已经完成分层导航与主要内容类型的可用原型。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已实现</span></div></article>
+            <article class="task" data-id="p0-2" data-phase="done" data-owner="both"><input type="checkbox" checked><div><h3>随手记可分类，也可恢复为随手记</h3><p>保留标题、来源和原始内容，不再因转换类型丢失信息。</p></div><div class="badges"><span class="badge user">共同验证</span><span class="badge">已实现</span></div></article>
+            <article class="task" data-id="p0-3" data-phase="done" data-owner="agent"><input type="checkbox" checked><div><h3>领域作为长期方向，并支持项目、知识、资料跨领域关联</h3><p>领域不再和内容类型处于同一逻辑层级。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已实现</span></div></article>
+            <article class="task" data-id="p0-4" data-phase="done" data-owner="agent"><input type="checkbox" checked><div><h3>表单按功能分区并保留真实关联</h3><p>项目、知识、资料统一使用 relatedRefs 建立跨类型及同类型内容关联；已有知识的 sourceRefs 历史依据关系继续保留，V2 新建卡片的“来源”改为自由文本。反向引用按当前卡片计算，双向关系在阅读区与只读图谱去重；旧资料的项目引用在载入时迁入 relatedRefs，不触碰原始资产。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已实现</span></div></article>
+            <article class="task" data-id="p0-5" data-phase="done" data-owner="agent"><input type="checkbox" checked><div><h3>搜索返回、下拉框点击外部关闭、弹窗拖动等基础交互</h3><p>已根据实际使用反馈修正主要交互障碍。卡片阅读与编辑窗口现可从四边和四角缩放，分别记住本机尺寸并可恢复默认；窄窗口继续使用安全的响应式布局，其他系统弹窗不参与缩放。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已实现</span></div></article>
+            <article class="task" data-id="p0-6" data-phase="done" data-owner="agent"><input type="checkbox" checked><div><h3>归档、回收站与永久删除分离</h3><p>普通删除只进入回收站并保留关联；恢复保持原ID与内容；永久删除仅允许从回收站执行，以不含正文的tombstone阻止灾难恢复重新导入，资料卡关联的原始资产不会随卡片删除。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+          </div>
+        </section>
+
+        <section class="roadmap-section" id="phase-1" data-group="now">
+          <div class="section-head"><span class="phase-no">1</span><div><h2>数据脱离浏览器，建立长期保存格式</h2><p>最高优先级。先确保现在的内容不会被界面或浏览器锁死。</p></div><span class="phase-tag">P0 · 必须先做</span></div>
+          <div class="tasks">
+            <article class="task" data-id="p1-1" data-phase="now" data-owner="both"><input type="checkbox" checked><div><h3>确定“卡片记录 v1”字段</h3><p>统一项目、知识、资料与随手记共有字段，同时允许各类型保留自己的专属字段。</p></div><div class="badges"><span class="badge user">你确认含义</span><span class="badge agent">Agent设计</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p1-2" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>把当前 localStorage 数据完整导出</h3><p>保留原始内容、类型、领域、关系、状态和时间，形成可验证的迁移包。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p1-3" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>实现“一条内容一份卡片文件”</h3><p>卡片采用人能阅读、程序也能解析的Markdown格式；SQLite不作为人工整理成果的唯一副本。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p1-4" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>建立稳定ID、创建时间、修改时间与版本号</h3><p>标题和文件路径变化后，关联关系仍不会断开，并为未来迁移留出版本标记。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p1-5" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>制作迁移与完整性检查</h3><p>导入旧数据后自动核对条目数量、关联关系、空字段和重复ID，并生成迁移报告。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p1-6" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>卡片编辑器 V2 第一阶段：统一项目、知识、资料录入结构</h3><p>三类主卡统一为标题、卡片信息、内容和自动时间；保留项目目标与待办、知识来源与置信度、资料来源与文件信息等必要差异。2026-09-25 已对真实知识库中的 6 张测试卡原地转换，迁移前快照保存在“系统/迁移快照”；卡片 ID、关联与资产信息不变。精确索引已同步，语义索引明确显示需重建。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p1-7" data-phase="now" data-owner="agent"><input type="checkbox"><div><h3>可视化关联内容选择器</h3><p>留待卡片编辑器下一阶段；本轮仅把现有多选关联入口归入“卡片信息”，未开发全屏选择器或图谱选卡。</p></div><div class="badges"><span class="badge agent">下一轮</span></div></article>
+          </div>
+        </section>
+
+        <section class="roadmap-section" id="phase-2" data-group="now">
+          <div class="section-head"><span class="phase-no">2</span><div><h2>移动硬盘知识库与文件入库</h2><p>把文字卡片和真实文件放进同一个可移动知识库。</p></div><span class="phase-tag">P0 · 核心基础</span></div>
+          <div class="tasks">
+            <article class="task" data-id="p2-0" data-phase="now" data-owner="both"><input type="checkbox"><div><h3>准备并验证移动固态硬盘</h3><p>已检测到E盘，但当前文件系统是NTFS，尚不能满足macOS原生写入；在确定exFAT或Mac端NTFS工具前保持未完成。</p></div><div class="badges"><span class="badge user">需要你选择</span><span class="badge agent">已完成检测</span><span class="badge hard">NTFS待处理</span></div></article>
+            <article class="task" data-id="p2-1" data-phase="now" data-owner="both"><input type="checkbox" checked><div><h3>创建 PersonalVault 与固定技术目录</h3><p>已在E盘建立卡片、文件和系统目录；只按宽泛文件类型分层，不根据标签自动建语义文件夹。</p></div><div class="badges"><span class="badge user">你确认命名</span><span class="badge agent">Agent实现</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p2-2" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>自动识别知识库根目录并统一使用相对路径</h3><p>已自动搜索带 vault.json 的 PersonalVault；知识库内文件只记录相对位置，Windows 盘符变化或 Mac 挂载位置变化时仍可重新找到。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p2-3" data-phase="now" data-owner="both"><input type="checkbox" checked><div><h3>实现三种导入方式</h3><p>已实现默认复制、明确移动、保留原路径三种方式；桌面版通过系统文件选择窗口操作。</p></div><div class="badges"><span class="badge user">后续体验验收</span><span class="badge agent">Agent实现</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p2-4" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>自动读取基础文件信息</h3><p>已记录文件名、格式、大小、修改时间、内容指纹，并通过 ffprobe 补充图片尺寸、音视频时长和编码信息。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p2-5" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>打开文件、在文件夹中显示、重新定位</h3><p>资料卡片已提供打开、定位和重新关联入口；重新关联后会更新路径与文件信息。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p2-6" data-phase="now" data-owner="both"><input type="checkbox" checked><div><h3>确定重名文件与重复导入规则</h3><p>规则已确定并通过自动测试：同内容直接复用；同名不同内容自动追加编号；绝不静默覆盖；移动前先复制并核对内容指纹。</p></div><div class="badges"><span class="badge user">规则已确认</span><span class="badge agent">Agent实现</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p2-7" data-phase="now" data-owner="agent"><input type="checkbox"><div><h3>打包 Windows 与 macOS 桌面版本</h3><p>Windows 桌面开发版已可运行；仍需制作无需开发环境的正式安装包，并在 Apple 芯片 Mac 上单独构建与验证。</p></div><div class="badges"><span class="badge agent">桌面壳已完成</span><span class="badge hard">正式打包待做</span></div></article>
+            <article class="task" data-id="p2-8" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>分开“应用程序”和“知识库数据”</h3><p>应用目前位于电脑，卡片、资产与索引目录位于 PersonalVault；桌面版启动时读取硬盘状态，每次保存后自动同步，移动硬盘不混入 Windows 或 Mac 程序文件。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+          </div>
+        </section>
+
+        <section class="roadmap-section" id="phase-3" data-group="now">
+          <div class="section-head"><span class="phase-no">3</span><div><h2>SQLite与精确检索</h2><p>先做好稳定、可解释的搜索，再叠加AI语义。</p></div><span class="phase-tag">P1 · 高优先级</span></div>
+          <div class="tasks">
+            <article class="task" data-id="p3-1" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>建立可重建的 SQLite 目录</h3><p>已索引卡片字段、文件路径与真实关系；即使状态文件丢失，也能从独立 Markdown 卡片重新生成。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p3-2" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>实现全文搜索</h3><p>已使用 SQLite FTS5 预建标题、正文和领域索引，并针对中文内容加入二字片段检索。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p3-3" data-phase="now" data-owner="both"><input type="checkbox" checked><div><h3>设计统一搜索与筛选界面</h3><p>已支持类型、领域、文件格式、状态、修改日期和媒体时长组合筛选，并可一键清除条件。</p></div><div class="badges"><span class="badge user">待你体验顺手度</span><span class="badge agent">Agent实现</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p3-4" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>增加索引状态与一键重建</h3><p>数据管理中会显示已索引数量、源卡片数量、更新时间、文件位置和是否需要重建。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+          </div>
+        </section>
+
+        <section class="roadmap-section" id="phase-4" data-group="now">
+          <div class="section-head"><span class="phase-no">4</span><div><h2>本地向量语义检索</h2><p>让自然语言能够找到意思相近但字面不同的内容。</p></div><span class="phase-tag">P1 · 高优先级</span></div>
+          <div class="tasks">
+            <article class="task" data-id="p4-1" data-phase="now" data-owner="user"><input type="checkbox"><div><h3>准备真实检索测试集</h3><p>提供20～50条真实卡片与10～20个日常搜索句，并指出你期望找到哪些结果。</p></div><div class="badges"><span class="badge user">你提供样本</span><span class="badge">低</span></div></article>
+            <article class="task" data-id="p4-2" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>确定跨设备默认文字向量模型</h3><p>已将 multilingual-e5-base Q8 设为 Windows 与 Mac 的统一默认，验证中英日混合搜索；BGE-small 保留为轻量回退。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p4-3" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>建立可替换的向量存储接口</h3><p>不同模型使用各自独立的 SQLite 向量目录；未来增加模型无需改动卡片结构。原生向量扩展只在数据规模明显增大后再评估。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p4-4" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>只向量化真正表达意义的文字</h3><p>已限定为标题、领域、说明、摘要、结论和经验等内容；路径、大小、哈希和时间不进入模型。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p4-5" data-phase="now" data-owner="both"><input type="checkbox" checked><div><h3>融合关键词、条件和语义结果</h3><p>已实现精确结果优先的混合排序、无意义编号拦截和较严格的相关结果截断。2026-09-23 起取消启动自动预热：仅在用户明确选择“精确＋语义”并执行适合语义检索的查询时按需加载模型，首次先显示精确结果，模型就绪后只为最新查询补充语义结果；真实测试集仍可继续校准。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">基础版本已完成</span></div></article>
+            <article class="task" data-id="p4-6" data-phase="now" data-owner="agent"><input type="checkbox" checked><div><h3>共享模型与跨平台设备自动选择</h3><p>模型只在移动硬盘保留一份；Windows 已验证 DirectML，Mac 将自动尝试 Core ML，并在加速不可用时安全回退 CPU。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+          </div>
+        </section>
+
+        <section class="roadmap-section" id="phase-5" data-group="later">
+          <div class="section-head"><span class="phase-no">5</span><div><h2>图片、视频与游戏资产呈现</h2><p>采用Are.na式结构骨架与Cosmos式媒体浏览体验。</p></div><span class="phase-tag">P2 · 中期</span></div>
+          <div class="tasks">
+            <article class="task" data-id="p5-1" data-phase="later" data-owner="both"><input type="checkbox" checked><div><h3>建立通用资产卡片</h3><p>已用同一套资料卡承载图片、视频、音频、文档、3D模型及Blender、UE等工程文件，并按格式显示对应软件。</p></div><div class="badges"><span class="badge user">你定义常用信息</span><span class="badge agent">Agent实现</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p5-2" data-phase="later" data-owner="agent"><input type="checkbox" checked><div><h3>实现画廊、列表与详情三种视图</h3><p>资料页已支持画廊与列表切换；详情页可查看大图、播放视频和音频，关闭、编辑或切换卡片时会停止并释放媒体；工程资产会显示对应软件与文件信息。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p5-3" data-phase="later" data-owner="both"><input type="checkbox" checked><div><h3>预览图以人工选择为主</h3><p>系统为视频提供一张可重建的候选画面；用户可为视频、模型和工程文件选择自定义封面，也可恢复自动封面。</p></div><div class="badges"><span class="badge user">你选择</span><span class="badge agent">Agent实现</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p5-4" data-phase="later" data-owner="agent"><input type="checkbox" checked><div><h3>建立可重建的缩略图与预览缓存</h3><p>视频缩略图保存在移动硬盘的“系统/预览缓存”，删除后可从原视频重新生成，不与原始资产混在一起。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p5-5" data-phase="later" data-owner="agent"><input type="checkbox" checked><div><h3>批量导入、批量编辑与重复检测</h3><p>已支持多文件导入和内容指纹重复检测；资料批量整理已按选择、领域、阅读状态和危险操作分区，可在画廊与列表中仅全选当前显示资料，统一添加或移除领域、应用阅读状态或移到回收站。项目、知识和资料页面均已支持“全部领域 / 指定领域 / 未归属领域”单选筛选。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+          </div>
+        </section>
+
+        <section class="roadmap-section" id="phase-6" data-group="later">
+          <div class="section-head"><span class="phase-no">6</span><div><h2>可选择、可复核的AI辅助</h2><p>默认关闭，不在后台偷偷分析全部资产。</p></div><span class="phase-tag">P2 · 中后期</span></div>
+          <div class="tasks">
+            <article class="task" data-id="p6-1" data-phase="later" data-owner="both"><input type="checkbox"><div><h3>设计AI建议审核区</h3><p>机器标签与人工标签明确分开，必须接受、修改或拒绝后才进入正式标签。</p></div><div class="badges"><span class="badge user">你验收逻辑</span><span class="badge agent">Agent实现</span><span class="badge">中等</span></div></article>
+            <article class="task" data-id="p6-2" data-phase="later" data-owner="agent"><input type="checkbox"><div><h3>图片标签模型小规模实测</h3><p>比较MobileCLIP、RAM与SmolVLM在你的参考图、作品图和资产图上的准确性与速度。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge hard">高</span></div></article>
+            <article class="task" data-id="p6-3" data-phase="later" data-owner="agent"><input type="checkbox"><div><h3>图片文字识别作为独立按钮</h3><p>使用本地OCR提取截图、教程图和扫描资料中的文字，不和一般图像标签混为一谈。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">中等</span></div></article>
+            <article class="task" data-id="p6-4" data-phase="later" data-owner="both"><input type="checkbox"><div><h3>视频代表帧分析</h3><p>默认由用户选择封面或少量代表帧，再调用图片模型；不默认分析完整视频。</p></div><div class="badges"><span class="badge user">你选择触发</span><span class="badge agent">Agent实现</span><span class="badge hard">高</span></div></article>
+            <article class="task" data-id="p6-5" data-phase="later" data-owner="both"><input type="checkbox"><div><h3>按需语音转文字</h3><p>使用whisper.cpp等本地方案，只有在你主动选择教学视频、访谈等内容时才运行。</p></div><div class="badges"><span class="badge user">你决定是否转录</span><span class="badge agent">Agent实现</span><span class="badge hard">高</span></div></article>
+            <article class="task" data-id="p6-6" data-phase="later" data-owner="agent"><input type="checkbox"><div><h3>处理队列、暂停、失败重试与资源提示</h3><p>所有耗时任务都显示进度，并能暂停、取消和稍后继续。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge hard">高</span></div></article>
+          </div>
+        </section>
+
+        <section class="roadmap-section" id="phase-7" data-group="later">
+          <div class="section-head"><span class="phase-no">7</span><div><h2>关系图谱、集合与节点画布</h2><p>图谱用于发现关系，节点画布用于主动表达流程，两者保持独立。</p></div><span class="phase-tag">P3 · 中后期</span></div>
+          <div class="tasks">
+            <article class="task" data-id="p7-1" data-phase="later" data-owner="agent"><input type="checkbox" checked><div><h3>关系图谱</h3><p>已完成只读Canvas图谱：项目、知识和资料作为节点，领域仅用于筛选与归属展示；支持类型/领域筛选、标题定位、节点随视图缩放、逐帧缓动缩放、惯性平移、节点拖动、中心弹簧展开入场、悬停浮起与渐变式邻居突出，并在桌面视口内完整呈现画布和阅读入口；节点大小与颜色深浅由去重后的直接连接总数决定。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p7-2" data-phase="later" data-owner="both"><input type="checkbox"><div><h3>集合与保存视图</h3><p>集合不是新的内容类型，而是把已有卡片临时编组；例如“赛博朋克角色参考”可跨领域、类型和标签。</p></div><div class="badges"><span class="badge user">你提供实例</span><span class="badge agent">Agent实现</span><span class="badge">中等</span></div></article>
+            <article class="task" data-id="p7-3" data-phase="later" data-owner="agent"><input type="checkbox"><div><h3>节点画布基础版</h3><p>允许手动摆放项目、知识、资料和文字节点，用连线表达工作流程或思考结构。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge hard">高</span></div></article>
+            <article class="task" data-id="p7-4" data-phase="future" data-owner="both"><input type="checkbox"><div><h3>可执行工作流探索</h3><p>后期再评估节点是否能触发导入、转录、向量化等操作；首版画布只负责表达，不急于自动执行。</p></div><div class="badges"><span class="badge user">你定义真实流程</span><span class="badge agent">Agent验证</span><span class="badge hard">远期</span></div></article>
+          </div>
+        </section>
+
+        <section class="roadmap-section" id="phase-8" data-group="later">
+          <div class="section-head"><span class="phase-no">8</span><div><h2>备份、迁移与健康检查</h2><p>移动硬盘是载体，不是备份；可靠性必须成为产品功能。</p></div><span class="phase-tag">贯穿实施</span></div>
+          <div class="tasks">
+            <article class="task" data-id="p8-1" data-phase="now" data-owner="both"><input type="checkbox"><div><h3>确定第二备份位置</h3><p>至少把卡片记录定期备份到电脑本地或另一块硬盘；重要原文件再决定是否做完整镜像。</p></div><div class="badges"><span class="badge user">你选择位置</span><span class="badge agent">Agent实现提醒</span><span class="badge">必须</span></div></article>
+            <article class="task" data-id="p8-2" data-phase="later" data-owner="agent"><input type="checkbox"><div><h3>一键备份与恢复</h3><p>应用退出后生成一致的卡片快照，恢复前展示内容数量和时间，不直接粗暴覆盖。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge hard">高</span></div></article>
+            <article class="task" data-id="p8-3" data-phase="later" data-owner="agent"><input type="checkbox"><div><h3>知识库健康检查</h3><p>发现缺失文件、断裂关联、损坏卡片、重复ID、待更新索引和空间占用异常。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">中等</span></div></article>
+            <article class="task" data-id="p8-4" data-phase="later" data-owner="agent"><input type="checkbox"><div><h3>安全关闭与弹出提醒</h3><p>写入完成后明确提示可以关闭应用并安全弹出移动硬盘，避免写入中直接拔盘。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">中等</span></div></article>
+            <article class="task" data-id="p8-5" data-phase="later" data-owner="agent"><input type="checkbox"><div><h3>版本迁移与向后兼容</h3><p>未来增加字段或更换数据库时自动迁移，先备份再升级，并保留失败回退能力。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge hard">高</span></div></article>
+            <article class="task" data-id="p8-6" data-phase="later" data-owner="both"><input type="checkbox"><div><h3>决定移动硬盘丢失后的隐私方案</h3><p>根据内容敏感程度评估是否启用磁盘加密；加密会增加跨Windows与Mac使用和忘记密码后的恢复成本，因此不默认开启。</p></div><div class="badges"><span class="badge user">你判断隐私需求</span><span class="badge agent">Agent调研方案</span><span class="badge">中等</span></div></article>
+          </div>
+        </section>
+
+        <section class="roadmap-section" id="phase-9" data-group="later">
+          <div class="section-head"><span class="phase-no">9</span><div><h2>命名、视觉与日常体验</h2><p>等基础逻辑稳定后统一美学，避免反复重做。</p></div><span class="phase-tag">P2 / P3</span></div>
+          <div class="tasks">
+            <article class="task" data-id="p9-1" data-phase="later" data-owner="user"><input type="checkbox"><div><h3>确定产品名称与语言气质</h3><p>替换“知行台”，避免老气、企业化或过强的AI产品腔。</p></div><div class="badges"><span class="badge user">你最终决定</span><span class="badge">低</span></div></article>
+            <article class="task" data-id="p9-2" data-phase="later" data-owner="both"><input type="checkbox" checked><div><h3>建立统一视觉系统</h3><p>Kimi 第一轮视觉改造已完成：形成冷白灰基底、明亮蓝强调的统一体系，并吸收 Are.na 的结构清晰与 Cosmos 的媒体优先呈现方向，覆盖主要页面的字体、颜色、间距和基础交互节奏。</p></div><div class="badges"><span class="badge user">Kimi视觉</span><span class="badge agent">已集成</span><span class="badge">已完成</span></div></article>
+            <article class="task" data-id="p9-3" data-phase="later" data-owner="agent"><input type="checkbox"><div><h3>键盘操作、快捷入口与状态反馈</h3><p>快速记录、全局搜索、返回、保存、批量选择等高频动作减少鼠标往返。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge">中等</span></div></article>
+            <article class="task" data-id="p9-4" data-phase="later" data-owner="both"><input type="checkbox"><div><h3>用真实数据持续做可用性复盘</h3><p>每完成一阶段，用实际项目、艺术资料和媒体资产试用，不用纯演示数据判断好不好用。</p></div><div class="badges"><span class="badge user">你日常使用</span><span class="badge agent">Agent修正</span><span class="badge">持续</span></div></article>
+          </div>
+        </section>
+
+        <section class="roadmap-section" id="phase-10" data-group="future">
+          <div class="section-head"><span class="phase-no">10</span><div><h2>3D空间化知识场景</h2><p>用可操控角色走进不同空间，是后期的浏览方式，不是新的数据系统。</p></div><span class="phase-tag">P4 · 远期实验</span></div>
+          <div class="tasks">
+            <article class="task" data-id="p10-1" data-phase="future" data-owner="both"><input type="checkbox"><div><h3>明确3D场景承担的真实用途</h3><p>验证它是提高空间记忆、探索乐趣和领域感知，还是仅仅增加操作成本；不为了“酷”而强行成为主入口。</p></div><div class="badges"><span class="badge user">你体验判断</span><span class="badge agent">Agent原型</span><span class="badge hard">探索</span></div></article>
+            <article class="task" data-id="p10-2" data-phase="future" data-owner="agent"><input type="checkbox"><div><h3>制作最低成本的空间原型</h3><p>先做俯视或等距小场景：小人移动、随手记小屋、项目工坊、知识图书馆、资料仓库与领域区域。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge hard">高</span></div></article>
+            <article class="task" data-id="p10-3" data-phase="future" data-owner="agent"><input type="checkbox"><div><h3>场景直接读取现有卡片与领域</h3><p>房屋、房间和展品只是同一批数据的空间化视图，不再建立第二套内容和标签。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge hard">高</span></div></article>
+            <article class="task" data-id="p10-4" data-phase="future" data-owner="both"><input type="checkbox"><div><h3>设计空间与关系图谱/节点画布的入口</h3><p>可以从知识图书馆进入关系图谱，从项目工坊打开工作流画布，但三者仍保持不同用途。</p></div><div class="badges"><span class="badge user">你定义体验</span><span class="badge agent">Agent实现</span><span class="badge hard">高</span></div></article>
+            <article class="task" data-id="p10-5" data-phase="future" data-owner="agent"><input type="checkbox"><div><h3>保留普通界面并控制性能</h3><p>3D场景永远是可选入口；低性能设备、快速检索和批量编辑仍使用普通二维界面。</p></div><div class="badges"><span class="badge agent">Agent</span><span class="badge hard">高</span></div></article>
+          </div>
+        </section>
+
+        <section class="roadmap-section" id="decisions">
+          <div class="section-head"><span class="phase-no">?</span><div><h2>实施前仍需逐项确认</h2><p>不必一次决定完；进入对应阶段时再确认即可。</p></div><span class="phase-tag">需要你的判断</span></div>
+          <div class="decision-grid">
+            <div class="decision"><b>最小记录负担</b><p>建议文字只强制“标题＋类型”；文件只强制“选择文件”，其余字段均可稍后补充。</p></div>
+            <div class="decision"><b>领域是否必填</b><p>当前建议不必填，避免快速记录变成负担；需要时可批量补充。</p></div>
+            <div class="decision"><b>文件默认操作 · 已确认</b><p>默认“复制进知识库”，同时提供“移动到知识库”和“保留原路径”两个明确选项。</p></div>
+            <div class="decision"><b>资料是否细分</b><p>参考资料与生成资产先作为可选属性，不急于拆成新的一级类型。</p></div>
+            <div class="decision"><b>重名文件处理 · 已确认</b><p>先按内容指纹判断：内容相同则复用已有文件；同名但内容不同则自动保留为“名称 (2)”；只有明确操作才允许替换。</p></div>
+            <div class="decision"><b>第二备份位置 · 暂缓</b><p>当前不阻塞开发；进入可靠性阶段时再决定卡片与重要原件的第二副本位置。</p></div>
+            <div class="decision"><b>Mac硬件类型 · 已确认</b><p>两台Mac均为Apple芯片，后续桌面应用和本地模型按Apple Silicon（arm64）准备。</p></div>
+            <div class="decision"><b>模型与程序的存放方式 · 已确认</b><p>程序和运行组件在每台电脑各安装一次；E5模型只在移动硬盘保存一份，插拔硬盘不会触发重复安装或下载。</p></div>
+            <div class="decision"><b>真实测试资料</b><p>准备AI自动化、艺术创作、视频、图片和工程文件等混合样本，避免方案只适合单一领域。</p></div>
+          </div>
+        </section>
+
+        <div class="empty" id="emptyState">没有符合当前筛选条件的任务。</div>
+      </main>
+    </div>
+
+    <footer>版本：Roadmap v1.1 · 更新日期：2026-09-20 · 该文件为规划留档，不包含真实知识库数据。</footer>
+  </div>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = "personal-workbench-roadmap-v1";
+      const tasks = [...document.querySelectorAll(".task")];
+      const sections = [...document.querySelectorAll(".roadmap-section[data-group]")];
+      const search = document.querySelector("#search");
+      const phaseFilter = document.querySelector("#phaseFilter");
+      const ownerFilter = document.querySelector("#ownerFilter");
+      const showOpen = document.querySelector("#showOpen");
+      let openOnly = false;
+
+      function load() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+          tasks.forEach(task => {
+            const input = task.querySelector("input");
+            if (input.hasAttribute("checked")) {
+              input.checked = true;
+            } else if (Object.prototype.hasOwnProperty.call(saved, task.dataset.id)) {
+              task.querySelector("input").checked = Boolean(saved[task.dataset.id]);
+            }
+          });
+        } catch (_) {}
+      }
+
+      function save() {
+        const state = Object.fromEntries(tasks.map(task => [task.dataset.id, task.querySelector("input").checked]));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+
+      function updateSummary() {
+        const done = tasks.filter(task => task.querySelector("input").checked).length;
+        const active = tasks.filter(task => task.dataset.phase === "now" && !task.querySelector("input").checked).length;
+        document.querySelector("#totalCount").textContent = tasks.length;
+        document.querySelector("#doneCount").textContent = done;
+        document.querySelector("#activeCount").textContent = active;
+        document.querySelector("#progressCount").textContent = `${Math.round(done / tasks.length * 100)}%`;
+        tasks.forEach(task => task.classList.toggle("done", task.querySelector("input").checked));
+      }
+
+      function applyFilters() {
+        const query = search.value.trim().toLowerCase();
+        const phase = phaseFilter.value;
+        const owner = ownerFilter.value;
+        tasks.forEach(task => {
+          const checked = task.querySelector("input").checked;
+          const textMatch = !query || task.textContent.toLowerCase().includes(query);
+          const phaseMatch = phase === "all" || task.dataset.phase === phase;
+          const ownerMatch = owner === "all" || task.dataset.owner === owner;
+          task.hidden = !(textMatch && phaseMatch && ownerMatch && (!openOnly || !checked));
+        });
+        sections.forEach(section => {
+          section.classList.toggle("hidden-section", ![...section.querySelectorAll(".task")].some(task => !task.hidden));
+        });
+        document.querySelector("#emptyState").style.display = tasks.some(task => !task.hidden) ? "none" : "block";
+      }
+
+      tasks.forEach(task => task.querySelector("input").addEventListener("change", () => {
+        save();
+        updateSummary();
+        applyFilters();
+      }));
+      [search, phaseFilter, ownerFilter].forEach(control => control.addEventListener("input", applyFilters));
+      showOpen.addEventListener("click", () => {
+        openOnly = !openOnly;
+        showOpen.textContent = openOnly ? "显示全部状态" : "只看未完成";
+        applyFilters();
+      });
+      document.querySelector("#resetFilters").addEventListener("click", () => {
+        search.value = "";
+        phaseFilter.value = "all";
+        ownerFilter.value = "all";
+        openOnly = false;
+        showOpen.textContent = "只看未完成";
+        applyFilters();
+      });
+      document.querySelector("#exportProgress").addEventListener("click", () => {
+        const payload = {
+          exportedAt: new Date().toISOString(),
+          version: 1,
+          tasks: tasks.map(task => ({
+            id: task.dataset.id,
+            title: task.querySelector("h3").textContent,
+            done: task.querySelector("input").checked
+          }))
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `知识工作台-待办进度-${new Date().toISOString().slice(0, 10)}.json`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      });
+
+      load();
+      updateSummary();
+      applyFilters();
+    })();
+  </script>
+</body>
+</html>

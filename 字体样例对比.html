@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>字体样例对比 · 个人知识工作台</title>
+
+<!-- 思源宋/黑、Inter、JetBrains Mono、IBM Plex Serif：Google Fonts（主 + 国内镜像回退） -->
+<link rel="stylesheet" href="https://fonts.loli.net/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@400;500;700&family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@400;500;700&family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap">
+<!-- 西文字体备用源：jsDelivr Fontsource（Google Fonts 不通时兜底） -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5/500.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5/600.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5/800.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/500.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5/600.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-serif@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-serif@5/500-italic.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-serif@5/600.css">
+<!-- MiSans（小米，OFL）：jsDelivr 子集化分包 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/misans-webfont@4.3.1/misans-style.min.css">
+<!-- 霞鹜文楷（OFL）：jsDelivr -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css">
+
+<!-- 本地字体（assets/fonts/，离线可用；同名规则覆盖上面的 CDN 版本） -->
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<style>
+  /* 得意黑 Smiley Sans（OFL）：单字重窄斜体 */
+  @font-face {
+    font-family: "Smiley Sans";
+    src: url("https://cdn.jsdelivr.net/npm/@fontpkg/smiley-sans@2.0.4/SmileySans-Oblique.ttf.woff2") format("woff2");
+    font-weight: 400 700;
+    font-display: swap;
+  }
+
+  :root {
+    --paper: #f6f7fa; --panel: #fafbfd; --card: #ffffff;
+    --ink: #1d1f26; --ink-soft: #474c59; --muted: #78808f; --faint: #a4abba;
+    --line: #e5e7ed; --line-strong: #cdd2dc;
+    --accent: #4a6cf7; --accent-deep: #3a57d4; --accent-soft: #e9eefd;
+    --green: #35a06f; --violet: #8b5cf6; --ochre: #d99413;
+    --shadow-card: 0 1px 2px rgba(29,31,38,.05), 0 10px 28px rgba(29,31,38,.07);
+
+    /* 方案变量（由 JS 切换） */
+    --f-display: "Noto Serif SC", serif;
+    --f-display-weight: 900;
+    --f-ui: "Inter", "Noto Sans SC", sans-serif;
+    --f-read: "LXGW WenKai", serif;
+    --f-mono: "JetBrains Mono", monospace;
+    --f-accent: "IBM Plex Serif", serif; /* 标题中西文斜体点缀 */
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--paper); color: var(--ink);
+    font-family: "Inter", "Noto Sans SC", "PingFang SC", sans-serif;
+    font-size: 15px; line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- 顶部控制条 ---------- */
+  .controls {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(250,251,253,.88); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line-strong);
+    padding: 14px 28px;
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  }
+  .controls .label { font-size: 12px; letter-spacing: .14em; color: var(--muted); font-weight: 600; }
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill-btn {
+    border: 1px solid var(--line-strong); background: var(--card);
+    border-radius: 999px; padding: 6px 16px; font-size: 13px; cursor: pointer;
+    color: var(--ink-soft); transition: all .15s;
+  }
+  .pill-btn:hover { border-color: var(--accent); color: var(--accent-deep); }
+  .pill-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .w-btn {
+    border: 1px solid var(--line); background: var(--card); border-radius: 6px;
+    width: 34px; height: 28px; font-size: 11.5px; cursor: pointer; color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+  .w-btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+  #font-status { font-size: 12px; color: var(--faint); margin-left: auto; }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 48px 32px 120px; }
+
+  section { margin-bottom: 80px; }
+  .sec-head { margin-bottom: 24px; }
+  .sec-head .kicker { font-size: 12px; letter-spacing: .16em; color: var(--accent); font-weight: 600; text-transform: uppercase; }
+  .sec-head h2 { font-size: 22px; font-weight: 700; margin-top: 6px; }
+  .sec-head p { color: var(--muted); font-size: 13.5px; margin-top: 6px; max-width: 760px; }
+
+  .font-tag {
+    display: inline-block; font-size: 11.5px; padding: 2px 10px; border-radius: 999px;
+    background: #eef0f4; color: var(--ink-soft); font-weight: 500; margin-top: 10px;
+  }
+  .font-tag b { color: var(--accent-deep); }
+
+  /* ---------- Craft 式 Hero ---------- */
+  .hero-stage {
+    border-radius: 20px; overflow: hidden;
+    background: linear-gradient(180deg, #aed9ef 0%, #c8e6f5 55%, #d9eef8 100%);
+    border: 1px solid #b6dcee;
+    box-shadow: var(--shadow-card);
+  }
+  .hero-nav {
+    display: flex; align-items: center; gap: 28px;
+    padding: 16px 28px; font-size: 13.5px;
+    font-family: var(--f-ui);
+  }
+  .hero-nav .logo {
+    font-family: var(--f-ui); font-weight: 800; font-size: 15px; letter-spacing: .06em;
+    background: rgba(255,255,255,.7); border-radius: 999px; padding: 6px 18px;
+  }
+  .hero-nav a { color: var(--ink); text-decoration: none; opacity: .75; }
+  .hero-nav .cta {
+    margin-left: auto; background: var(--ink); color: #fff; border-radius: 999px;
+    padding: 7px 18px; font-weight: 600; font-size: 13px;
+  }
+  .hero-body { text-align: center; padding: 72px 32px 110px; }
+  .hero-h1 {
+    font-family: var(--f-display);
+    font-weight: var(--f-display-weight);
+    font-size: clamp(38px, 5.6vw, 64px);
+    line-height: 1.28; letter-spacing: .01em; color: #14161c;
+  }
+  .hero-h1 .en { font-family: var(--f-accent); font-style: italic; font-weight: 500; letter-spacing: 0; }
+  .hero-sub { margin-top: 22px; font-family: var(--f-ui); color: #3c4450; font-size: 15px; }
+  .hero-btn {
+    display: inline-block; margin-top: 30px; font-family: var(--f-ui);
+    background: #fff; color: var(--ink); border-radius: 999px; padding: 12px 30px;
+    font-weight: 600; font-size: 14px; box-shadow: 0 6px 24px rgba(20,40,60,.18);
+  }
+
+  /* ---------- 模拟工作台 ---------- */
+  .app-frame {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    overflow: hidden; box-shadow: var(--shadow-card);
+    display: grid; grid-template-columns: 220px 1fr;
+  }
+  .app-side {
+    border-right: 1px solid var(--line); padding: 18px 14px; background: var(--panel);
+    font-family: var(--f-ui); font-size: 13.5px;
+  }
+  .app-side .side-title { font-size: 11.5px; letter-spacing: .1em; color: var(--faint); margin: 14px 8px 6px; }
+  .app-side .item { padding: 6px 10px; border-radius: 7px; color: var(--ink-soft); display: flex; justify-content: space-between; }
+  .app-side .item.on { background: var(--accent-soft); color: var(--accent-deep); font-weight: 600; }
+  .app-side .item .n { font-family: var(--f-mono); font-size: 11px; color: var(--faint); }
+  .app-main { padding: 26px 30px 34px; }
+  .app-main h3.doc-title {
+    font-family: var(--f-display); font-weight: min(var(--f-display-weight), 700);
+    font-size: 26px; line-height: 1.35; margin-bottom: 4px;
+  }
+  .doc-meta {
+    font-family: var(--f-mono); font-size: 11.5px; color: var(--faint);
+    font-variant-numeric: tabular-nums; margin-bottom: 18px;
+  }
+  .doc-read {
+    font-family: var(--f-read); font-size: 15.5px; line-height: 2;
+    color: var(--ink-soft); max-width: 640px;
+  }
+  .doc-read + .doc-read { margin-top: 14px; }
+  .chips { display: flex; gap: 8px; margin: 20px 0 24px; font-family: var(--f-ui); }
+  .chip { font-size: 12px; padding: 3px 12px; border-radius: 999px; font-weight: 500; }
+  .chip.b { background: #e3f0fc; color: #1f6fb8; } .chip.g { background: #e6f4ee; color: var(--green); }
+  .chip.v { background: #f0ebfc; color: var(--violet); } .chip.o { background: #faf1de; color: var(--ochre); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .mini-card {
+    border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+    font-family: var(--f-ui); background: #fff;
+  }
+  .mini-card b { display: block; font-size: 13.5px; font-weight: 600; }
+  .mini-card span { font-size: 11.5px; color: var(--faint); font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+  .mini-card p { font-size: 12.5px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+  .code-block {
+    margin-top: 24px; background: #1a1c22; color: #d8dce6; border-radius: 10px;
+    padding: 16px 18px; font-family: var(--f-mono); font-size: 12.5px; line-height: 1.75;
+    overflow-x: auto;
+  }
+  .code-block .c { color: #7c8598; } .code-block .k { color: #8ab4f8; } .code-block .s { color: #a7d7a9; }
+
+  /* ---------- 对比墙 ---------- */
+  .wall { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--card); box-shadow: var(--shadow-card); }
+  .wall-row { padding: 30px 34px; border-bottom: 1px solid var(--line); }
+  .wall-row:last-child { border-bottom: none; }
+  .wall-row .sample { font-size: clamp(26px, 3.6vw, 42px); line-height: 1.35; letter-spacing: .01em; }
+  .wall-row .sample .en { font-family: var(--f-accent); font-style: italic; font-weight: 500; }
+  .wall-row .note-line { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+  .wall-row .note-line b { color: var(--ink-soft); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } .app-frame { grid-template-columns: 1fr; } .app-side { display: none; } }
+  .panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 24px 26px; box-shadow: var(--shadow-card);
+  }
+  .panel .body-sample { font-size: 15px; line-height: 2; color: var(--ink-soft); }
+  .panel .num-sample { font-size: 26px; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+  .panel .num-sample small { display: block; font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+  .callout {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 10px 10px 0; padding: 14px 18px; font-size: 13.5px; color: var(--ink-soft);
+    margin-top: 20px;
+  }
+  a { color: var(--accent); }
+  footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--line-strong); color: var(--faint); font-size: 12.5px; }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <span class="label">方案</span>
+  <div class="pills" id="scheme-pills">
+    <button class="pill-btn active" data-scheme="A">A · 安静编辑感</button>
+    <button class="pill-btn" data-scheme="B">B · 现代工具感</button>
+    <button class="pill-btn" data-scheme="C">C · 人文工作室</button>
+    <button class="pill-btn" data-scheme="D">D · Craft 复刻</button>
+  </div>
+  <span class="label">标题字重</span>
+  <div class="pills" id="weight-pills">
+    <button class="w-btn" data-w="400">400</button>
+    <button class="w-btn" data-w="600">600</button>
+    <button class="w-btn" data-w="700">700</button>
+    <button class="w-btn active" data-w="900">900</button>
+  </div>
+  <span id="font-status">字体加载中…</span>
+</div>
+
+<div class="wrap">
+
+<!-- ========== 1 Craft 式 Hero 预览 ========== -->
+<section>
+  <div class="sec-head">
+    <div class="kicker">01 · Hero Preview</div>
+    <h2>Craft 式首页主视觉（随方案整体切换）</h2>
+    <p>复刻你截图里的构图：浅蓝底 + 超大标题 + 无衬线导航。Craft 的关键手法是<strong>标题用衬线宋体、界面用无衬线体</strong>——点击上方方案按钮对比四种气质。</p>
+  </div>
+  <div class="hero-stage">
+    <div class="hero-nav">
+      <span class="logo">知行台</span>
+      <a>收集</a><a>笔记</a><a>图谱</a><a>任务</a>
+      <span class="cta">开始记录</span>
+    </div>
+    <div class="hero-body">
+      <div class="hero-h1">属于你的笔记、任务<br>与<span class="en">Inspiration</span>空间</div>
+      <div class="hero-sub">一个安静的个人知识工作台，把碎片收拢成结构。</div>
+      <span class="hero-btn">免费开始</span>
+    </div>
+  </div>
+  <div style="margin-top:12px">
+    <span class="font-tag">当前标题字体：<b id="cur-display">Noto Serif SC</b></span>
+    <span class="font-tag">界面字体：<b id="cur-ui">Inter + Noto Sans SC</b></span>
+    <span class="font-tag">西文斜体点缀：<b>IBM Plex Serif Italic</b>（混排手法，见 04 节）</span>
+  </div>
+</section>
+
+<!-- ========== 2 模拟工作台 ========== -->
+<section>
+  <div class="sec-head">
+    <div class="kicker">02 · Real UI Preview</div>
+    <h2>模拟工作台真实界面（随方案整体切换）</h2>
+    <p>字体只有在真实内容里才看得出好坏。这个面板把工作台的典型元素都放进来了：侧栏计数、文档标题、长文阅读、彩色标签、卡片、时间戳、代码块。</p>
+  </div>
+  <div class="app-frame">
+    <div class="app-side">
+      <div class="side-title">空间</div>
+      <div class="item on">收集箱 <span class="n">128</span></div>
+      <div class="item">笔记 <span class="n">342</span></div>
+      <div class="item">图谱 <span class="n">57</span></div>
+      <div class="item">任务 <span class="n">12</span></div>
+      <div class="side-title">标签</div>
+      <div class="item"># 字体排印 <span class="n">9</span></div>
+      <div class="item"># 向量检索 <span class="n">23</span></div>
+      <div class="item"># 设计参考 <span class="n">41</span></div>
+    </div>
+    <div class="app-main">
+      <h3 class="doc-title">字体如何塑造一个工作台的性格</h3>
+      <div class="doc-meta">2026-09-22 14:32 · 修改于 18:07 · 阅读约 4 min · ID kw-0342</div>
+      <div class="chips">
+        <span class="chip b">字体排印</span><span class="chip g">方法论</span><span class="chip v">视觉改造</span><span class="chip o">待整理</span>
+      </div>
+      <p class="doc-read">好的界面字体不该被注意到。它像房间里的光线——你只觉得待得舒服，却说不出为什么。衬线体带来出版物的秩序感，无衬线体带来工具的确定感，而楷体在两者之间留了一点人的温度。</p>
+      <p class="doc-read">选择字体组合时，先定正文，再定标题，最后让西文与数字去「对齐」中文的灰度。混排的质量，往往比单款字体的好看与否更重要。</p>
+      <div class="cards" style="margin-top:24px">
+        <div class="mini-card"><b>Are.na 式信息结构</b><span>2026-09-18</span><p>细线、留白、层级优先；内容本身即是装饰。</p></div>
+        <div class="mini-card"><b>向量检索技术决策</b><span>2026-08-30</span><p>本地 embedding + sqlite-vec，延迟 40ms 以内。</p></div>
+        <div class="mini-card"><b>Cosmos 画廊参考</b><span>2026-09-05</span><p>画面为主体、弱边框，媒体浏览的情绪价值。</p></div>
+      </div>
+      <div class="code-block"><span class="c">// search-index.mjs · 检索入口</span>
+<span class="k">const</span> hits = <span class="k">await</span> index.search(query, { topK: 20, mode: <span class="s">"hybrid"</span> });
+<span class="k">if</span> (hits.score &lt; 0.62) rerank(hits, { model: <span class="s">"bge-reranker"</span> });</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 3 标题字体对比墙 ========== -->
+<section>
+  <div class="sec-head">
+    <div class="kicker">03 · Display Font Wall</div>
+    <h2>标题字体对比墙（同一句，逐行换字体）</h2>
+    <p>直接回答「Craft 那种大标题用哪款能复刻」。重点看：笔画对比（横细竖粗的程度）、字面大小、重心、以及哪个最贴近你截图里的感觉。</p>
+  </div>
+  <div class="wall">
+    <div class="wall-row">
+      <div class="sample" style="font-family:'Noto Serif SC',serif;font-weight:900">属于你的笔记、任务与灵感空间</div>
+      <div class="note-line"><b>思源宋体 Black 900</b> · 最接近 Craft 截图的默认答案：明体骨架 + 现代衬线，笔画对比强，「编辑感」最正。<a href="https://fonts.google.com/noto/specimen/Noto+Serif+SC" target="_blank">下载</a></div>
+    </div>
+    <div class="wall-row">
+      <div class="sample" style="font-family:'Noto Serif SC',serif;font-weight:600">属于你的笔记、任务与灵感空间</div>
+      <div class="note-line"><b>思源宋体 SemiBold 600</b> · 同款减细：更轻盈、更安静，压迫感低。字重对气质的影响比换字体还大。</div>
+    </div>
+    <div class="wall-row">
+      <div class="sample" style="font-family:'LXGW WenKai',serif">属于你的笔记、任务与灵感空间</div>
+      <div class="note-line"><b>霞鹜文楷 Bold</b> · 楷体书卷气，温润手写感，像笔记本封面而非杂志刊头。<a href="https://github.com/lxgw/LxgwWenKai" target="_blank">下载</a></div>
+    </div>
+    <div class="wall-row">
+      <div class="sample" style="font-family:'Smiley Sans',sans-serif">属于你的笔记、任务与灵感空间</div>
+      <div class="note-line"><b>得意黑 Smiley Sans</b> · 窄而斜、带美术字弧线，辨识度最高，但性格最强——适合点缀不适合通篇。<a href="https://github.com/atelier-anchor/smiley-sans" target="_blank">下载</a></div>
+    </div>
+    <div class="wall-row">
+      <div class="sample" style="font-family:'MiSans',sans-serif;font-weight:700">属于你的笔记、任务与灵感空间</div>
+      <div class="note-line"><b>MiSans Demibold</b> · 现代科技产品感：字面饱满、笔画平直。离 Craft 最远，离 Linear/新一代工具最近。<a href="https://hyperos.mi.com/font" target="_blank">下载</a></div>
+    </div>
+    <div class="wall-row">
+      <div class="sample" style="font-family:'Noto Sans SC',sans-serif;font-weight:700">属于你的笔记、任务与灵感空间</div>
+      <div class="note-line"><b>思源黑体 Bold</b> · 对照组：中性黑体做标题的效果。对比一下，你会立刻理解 Craft 为什么选衬线。<a href="https://fonts.google.com/noto/specimen/Noto+Sans+SC" target="_blank">下载</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 4 中西混排手法 ========== -->
+<section>
+  <div class="sec-head">
+    <div class="kicker">04 · Mixed Script Composition</div>
+    <h2>「组合字体」手法：中西混排的三种玩法</h2>
+    <p>你注意到 Craft「组合了不同字体」——除了标题/界面分层，还有一招是<strong>标题内部的西文用斜体衬线</strong>。同一句话，三种西文处理，气质差异很直观：</p>
+  </div>
+  <div class="wall">
+    <div class="wall-row">
+      <div class="sample" style="font-family:'Noto Serif SC',serif;font-weight:700">把 <span style="font-family:'IBM Plex Serif',serif;font-style:italic;font-weight:500">Notes</span>、<span style="font-family:'IBM Plex Serif',serif;font-style:italic;font-weight:500">Tasks</span> 与灵感收进一个空间</div>
+      <div class="note-line"><b>玩法 1：宋体 + IBM Plex Serif Italic</b> · 西文斜体衬线融进中文宋体，最「杂志」、最 Craft。</div>
+    </div>
+    <div class="wall-row">
+      <div class="sample" style="font-family:'Noto Serif SC',serif;font-weight:700">把 <span style="font-family:'Inter',sans-serif;font-weight:600;font-style:normal">Notes</span>、<span style="font-family:'Inter',sans-serif;font-weight:600;font-style:normal">Tasks</span> 与灵感收进一个空间</div>
+      <div class="note-line"><b>玩法 2：宋体 + Inter</b> · 西文用无衬线，形成「编辑 × 工具」的碰撞感，更现代。</div>
+    </div>
+    <div class="wall-row">
+      <div class="sample" style="font-family:'Noto Serif SC',serif;font-weight:700">把 Notes、Tasks 与灵感收进一个空间</div>
+      <div class="note-line"><b>玩法 3：不处理</b> · 交给字体回退（思源宋自带西文）。最省事，但西文偏秀气、存在感弱。对比之后你就知道要不要做混排处理。</div>
+    </div>
+  </div>
+  <div class="callout">实现成本很低：给标题里的西文包一个 <code>&lt;span class="en"&gt;</code>，CSS 指定 <code>font-family: "IBM Plex Serif"; font-style: italic;</code> 即可。IBM Plex Serif 是 OFL 免费字体，Google Fonts 可直接下载。</div>
+</section>
+
+<!-- ========== 5 正文字体对比 ========== -->
+<section>
+  <div class="sec-head">
+    <div class="kicker">05 · Body Text Comparison</div>
+    <h2>正文阅读对比（同一段笔记）</h2>
+    <p>正文是你每天看最久的层。重点感受：灰度深浅、行内节奏、长时间阅读是否累。</p>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <div class="body-sample" style="font-family:'Noto Sans SC',sans-serif">知识管理的目的不是收藏，而是重逢。当一条三个月前的笔记在今天的搜索里浮现，它与当下的问题发生连接，那一刻工具才真正完成了自己的工作。检索的质量，决定了重逢的概率。</div>
+      <span class="font-tag"><b>思源黑体</b> · 中性稳妥，默认答案</span>
+    </div>
+    <div class="panel">
+      <div class="body-sample" style="font-family:'MiSans',sans-serif">知识管理的目的不是收藏，而是重逢。当一条三个月前的笔记在今天的搜索里浮现，它与当下的问题发生连接，那一刻工具才真正完成了自己的工作。检索的质量，决定了重逢的概率。</div>
+      <span class="font-tag"><b>MiSans</b> · 字面更大更饱满，现代但略「满」</span>
+    </div>
+    <div class="panel">
+      <div class="body-sample" style="font-family:'LXGW WenKai',serif">知识管理的目的不是收藏，而是重逢。当一条三个月前的笔记在今天的搜索里浮现，它与当下的问题发生连接，那一刻工具才真正完成了自己的工作。检索的质量，决定了重逢的概率。</div>
+      <span class="font-tag"><b>霞鹜文楷</b> · 楷体温润，沉浸感最强，但 UI 感最弱</span>
+    </div>
+    <div class="panel">
+      <div class="body-sample" style="font-family:'Noto Serif SC',serif">知识管理的目的不是收藏，而是重逢。当一条三个月前的笔记在今天的搜索里浮现，它与当下的问题发生连接，那一刻工具才真正完成了自己的工作。检索的质量，决定了重逢的概率。</div>
+      <span class="font-tag"><b>思源宋体</b> · 出版物感，与宋体标题同族时最和谐</span>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 6 数字与代码 ========== -->
+<section>
+  <div class="sec-head">
+    <div class="kicker">06 · Numbers & Code</div>
+    <h2>数字、时间戳与代码</h2>
+    <p>工作台里时间戳、计数、ID 出现频率极高，数字的性格比你想象中更重要。</p>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <div class="num-sample" style="font-family:'Inter',sans-serif;font-weight:600">2026-09-22 14:32:07<small>1,024 notes · 57 graphs · 98.6%</small></div>
+      <span class="font-tag"><b>Inter</b> · tabular-nums 对齐，UI 数字标准解</span>
+    </div>
+    <div class="panel">
+      <div class="num-sample" style="font-family:'MiSans',sans-serif;font-weight:600">2026-09-22 14:32:07<small>1,024 notes · 57 graphs · 98.6%</small></div>
+      <span class="font-tag"><b>MiSans</b> · 自带等宽数字特性，与中文同族零违和</span>
+    </div>
+    <div class="panel">
+      <div class="num-sample" style="font-family:'JetBrains Mono',monospace;font-weight:500">2026-09-22 14:32:07<small>1,024 notes · 57 graphs · 98.6%</small></div>
+      <span class="font-tag"><b>JetBrains Mono</b> · 等宽气质，时间戳/日志/ID 的「工程师感」</span>
+    </div>
+    <div class="panel">
+      <div class="code-block" style="margin-top:0;font-family:'JetBrains Mono',monospace"><span class="k">const</span> query = <span class="s">"字体排印"</span>;
+<span class="k">if</span> (score &gt;= 0.62) show(hits); <span class="c">// != -> ≠</span></div>
+      <span class="font-tag"><b>JetBrains Mono</b> · 代码块首选，含连字；中文注释会回退到系统中文字体</span>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>本页字体优先从本地 <code style="font-family:'JetBrains Mono',monospace">assets/fonts/fonts.css</code> 加载（已随项目下载，离线可用），本地缺失时回退到 CDN（Google Fonts 主备双源 + jsDelivr）。确认方案后，按《字体资源调研报告》第 08 节把用到的字体打包进应用即可完全离线。所有展示字体均为 OFL 或免费商用授权。若某个字体显示为系统默认字体，说明对应源加载失败，可刷新或检查网络。</p>
+</footer>
+
+</div>
+
+<script>
+  const schemes = {
+    A: { name: "安静编辑感", display: '"Noto Serif SC", serif', weight: "900",
+         ui: '"Inter", "Noto Sans SC", sans-serif', read: '"LXGW WenKai", serif',
+         mono: '"JetBrains Mono", monospace', dname: "Noto Serif SC", uname: "Inter + Noto Sans SC" },
+    B: { name: "现代工具感", display: '"MiSans", sans-serif', weight: "700",
+         ui: '"MiSans", "Inter", sans-serif', read: '"Noto Serif SC", serif',
+         mono: '"JetBrains Mono", monospace', dname: "MiSans", uname: "MiSans" },
+    C: { name: "人文工作室", display: '"Smiley Sans", sans-serif', weight: "400",
+         ui: '"Inter", "Noto Sans SC", sans-serif', read: '"LXGW WenKai", serif',
+         mono: '"JetBrains Mono", monospace', dname: "Smiley Sans（得意黑）", uname: "Inter + Noto Sans SC" },
+    D: { name: "Craft 复刻", display: '"Noto Serif SC", serif', weight: "700",
+         ui: '"Inter", "Noto Sans SC", sans-serif', read: '"Noto Serif SC", serif',
+         mono: '"JetBrains Mono", monospace', dname: "Noto Serif SC 700", uname: "Inter + Noto Sans SC" }
+  };
+
+  const root = document.documentElement;
+  const pills = document.querySelectorAll("#scheme-pills .pill-btn");
+  const wPills = document.querySelectorAll("#weight-pills .w-btn");
+  let current = "A", customWeight = null;
+
+  function apply(key) {
+    current = key;
+    const s = schemes[key];
+    root.style.setProperty("--f-display", s.display);
+    root.style.setProperty("--f-ui", s.ui);
+    root.style.setProperty("--f-read", s.read);
+    root.style.setProperty("--f-mono", s.mono);
+    root.style.setProperty("--f-display-weight", customWeight || s.weight);
+    document.getElementById("cur-display").textContent = s.dname;
+    document.getElementById("cur-ui").textContent = s.uname;
+    pills.forEach(p => p.classList.toggle("active", p.dataset.scheme === key));
+    wPills.forEach(p => p.classList.toggle("active",
+      customWeight ? p.dataset.w === customWeight : p.dataset.w === s.weight));
+  }
+
+  pills.forEach(p => p.addEventListener("click", () => { customWeight = null; apply(p.dataset.scheme); }));
+  wPills.forEach(p => p.addEventListener("click", () => {
+    customWeight = p.dataset.w;
+    root.style.setProperty("--f-display-weight", customWeight);
+    wPills.forEach(q => q.classList.toggle("active", q === p));
+  }));
+
+  apply("A");
+
+  function reportFonts() {
+    const fams = ["Noto Serif SC", "Noto Sans SC", "MiSans", "LXGW WenKai", "Smiley Sans", "Inter", "IBM Plex Serif", "JetBrains Mono"];
+    const ok = fams.filter(f => document.fonts.check(`16px "${f}"`));
+    const miss = fams.filter(f => !document.fonts.check(`16px "${f}"`));
+    document.getElementById("font-status").textContent =
+      miss.length ? ("检测 " + ok.length + "/" + fams.length + "（仅供参考：若下方样例已正常显示对应字体风格，说明实际加载成功）")
+                  : "8 款预览字体全部加载完成";
+    return miss.length;
+  }
+  document.fonts.ready.then(() => {
+    let tries = 0;
+    const tick = () => { if (reportFonts() && ++tries < 30) setTimeout(tick, 2000); };
+    tick();
+    document.fonts.addEventListener("loadingdone", reportFonts);
+  });
+</script>
+</body>
+</html>

@@ -172,6 +172,9 @@ let browsingAreaId = null;
 let editingId = null;
 let editingCanvasId = null;
 let editingCoverSelection = null;
+let editingCustomCover = null;
+let editingCustomCoverUpload = null;
+let editingCustomCoverRequest = null;
 let canvasModeSwitch = null;
 
 function cancelCanvasModeSwitch() {
@@ -256,7 +259,9 @@ async function cardCoverData(entry) {
   if(!cardCoverDataCache.has(key))cardCoverDataCache.set(key,(async()=>{
     const snapshot=entry.canvasVersion===1 ? await loadCanvasDocument(entry.id) : null;
     const attachments=snapshot?.attachments || (entry.assetId ? [{id:entry.assetId,name:entry.fileName || entry.title,category:entry.assetCategory,durationSeconds:entry.durationSeconds}] : []);
-    return {items:await coverItems(attachments),selectedId:snapshot?.coverAssetId || null};
+    const selectedId=snapshot?.coverAssetId || null;
+    const custom=snapshot?.customCoverId===selectedId && snapshot?.customCover ? [snapshot.customCover] : [];
+    return {items:await coverItems([...attachments,...custom]),selectedId};
   })().catch(error=>{cardCoverDataCache.delete(key);throw error;}));
   return cardCoverDataCache.get(key);
 }
@@ -280,12 +285,32 @@ async function mountCoverPicker(frame,entry,snapshot,liveAttachments=null) {
   const version=(coverPickerUpdates.get(target)||0)+1;coverPickerUpdates.set(target,version);
   if(!window.WorkbenchCover)await new Promise(resolve=>window.addEventListener('workbench-cover-ready',resolve,{once:true}));
   if(!target.isConnected || editingCanvasId!==frame.dataset.canvasCardId)return;
-  if(liveAttachments===null)editingCoverSelection=snapshot?.coverAssetId || null;
+  if(liveAttachments===null){
+    editingCoverSelection=snapshot?.coverAssetId || null;
+    editingCustomCover=snapshot?.customCover ? (await coverItems([snapshot.customCover]))[0] : null;
+    editingCustomCoverUpload=null;
+  }
   const existing=liveAttachments || snapshot?.attachments || (entry.assetId ? [{id:entry.assetId,name:entry.fileName || entry.title,category:entry.assetCategory,durationSeconds:entry.durationSeconds}] : []);
   const items=await coverItems(existing);
   if(!target.isConnected||coverPickerUpdates.get(target)!==version)return;
-  if(editingCoverSelection&&!items.some(item=>item.id===editingCoverSelection))editingCoverSelection=null;
-  WorkbenchCover.mount(target,{key:editingCanvasId,items,selectedId:editingCoverSelection,onSelect:id=>{editingCoverSelection=id;},onRefresh:async()=>{
+  if(editingCoverSelection!==editingCustomCover?.id&&editingCoverSelection&&!items.some(item=>item.id===editingCoverSelection))editingCoverSelection=null;
+  WorkbenchCover.mount(target,{key:editingCanvasId,items,customCover:editingCustomCover,selectedId:editingCoverSelection,onSelect:id=>{editingCoverSelection=id;},onCustomSelect:file=>{
+    const cardId=editingCanvasId;
+    const request=(async()=>{
+      if(!/\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(file.name))throw new Error('请选择 PNG、JPG、WebP、GIF、BMP 或 AVIF 图片');
+      const dataUrl=await blobDataUrl(file);
+      if(!/^data:image\/(png|jpeg|webp|gif|bmp|avif);base64,/.test(dataUrl))throw new Error('请选择常见图片文件');
+      const image=new Image();image.src=dataUrl;
+      try{await image.decode();}catch{throw new Error('无法读取这张图片，请选择有效的图片文件');}
+      if(!target.isConnected||editingCanvasId!==cardId||!$('#editorDialog').open)throw new Error('编辑窗口已关闭');
+      editingCustomCoverUpload={name:file.name,dataUrl,width:image.naturalWidth,height:image.naturalHeight};
+      editingCustomCover={id:'custom-cover-draft',name:file.name,category:'图片',url:dataUrl};
+      editingCoverSelection=editingCustomCover.id;
+      return editingCustomCover;
+    })();
+    editingCustomCoverRequest=request;
+    return request.finally(()=>{if(editingCustomCoverRequest===request)editingCustomCoverRequest=null;});
+  },onRefresh:async()=>{
     const current=await captureCanvas(frame);
     const live=new Set(Object.values(current.linkedAssets || {}));
     if(current.primaryAssetId)live.add(current.primaryAssetId);
@@ -2078,6 +2103,7 @@ async function confirmFloatingCanvas(key,snapshot) {
   if(!floatingCanvasWindows.get(key))throw new Error('画布窗口已断开');
   const stored=await loadCanvasDocument(key);
   if(stored?.coverAssetId)snapshot.coverAssetId=stored.coverAssetId;
+  if(stored?.customCoverId)snapshot.customCoverId=stored.customCoverId;
   const entry=entryById(key);
   if(!entry)throw new Error('卡片已不存在');
   const updated={...entry,content:snapshot.text,canvasVersion:1,updatedAt:WorkbenchData.isoNow()};
@@ -2477,6 +2503,9 @@ function openEditor(type, entry=null, preset={}, options={}) {
   const model = { ...preset, ...(entry||{}) };
   editingId = entry?.id || null;
   editingCoverSelection = null;
+  editingCustomCover = null;
+  editingCustomCoverUpload = null;
+  editingCustomCoverRequest = null;
   editingCanvasId = WorkbenchCardV2.MAIN_TYPES.has(type) ? (entry?.id || crypto.randomUUID()) : null;
   editorReturnEntryId = options.returnEntryId || (options.returnToViewer && entry ? entry.id : null);
   editingRefs = {};
@@ -2673,6 +2702,7 @@ async function saveForm(event) {
     try {
       const frame=$("#editorDialog .main-canvas-frame");
       if(frame.dataset.canvasMigrationIncomplete==="true") throw new Error("旧图片未能完整导入，请在桌面版重新打开卡片");
+      if(editingCustomCoverRequest)await editingCustomCoverRequest;
       const snapshot=await captureCanvas(frame);
       delete snapshot.coverSourceId;
       if(editingCoverSelection?.startsWith('source:')) {
@@ -2681,6 +2711,10 @@ async function saveForm(event) {
         else snapshot.coverAssetId=null;
       }
       else snapshot.coverAssetId=editingCoverSelection;
+      const savedCustomCover=canvasFrameConfigs.get(frame)?.snapshot?.customCoverId;
+      if(savedCustomCover)snapshot.customCoverId=savedCustomCover;
+      if(editingCustomCoverUpload)snapshot.customCoverUpload=editingCustomCoverUpload;
+      snapshot.customCoverSelected=Boolean(editingCustomCover&&editingCoverSelection===editingCustomCover.id);
       snapshot.cardInfo={title:data.title,type:data.type};
       const configBeforeSave=canvasFrameConfigs.get(frame);
       const originalDocument=await configBeforeSave?.initialDocument;
@@ -3565,7 +3599,12 @@ $("#editViewedEntry").addEventListener("click",()=>{
   openEditor(entry.type,entry,{}, { returnToViewer:true,transferRect,scrollTop,waitForCanvas,canvasFrame });
 });
 $("#editorDialog").addEventListener("close",()=>{
-  if(!$("#editorDialog").open) cancelCanvasModeSwitch();
+  if(!$("#editorDialog").open){
+    cancelCanvasModeSwitch();
+    editingCustomCover=null;editingCustomCoverUpload=null;editingCustomCoverRequest=null;
+    const picker=$('#editorDialog [data-cover-editor]');
+    if(picker)window.WorkbenchCover?.unmount(picker);
+  }
 });
 $("#startProjectReview").addEventListener("click",()=>startReviewForProject(entryById(viewedEntryId)));
 $("#cancelEdit").addEventListener("click",()=>{

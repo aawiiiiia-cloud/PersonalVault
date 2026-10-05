@@ -38,7 +38,7 @@ const asset=async id=>{
   return globalManifest.assets[id];
 };
 function referencedIds(card,doc){
-  const ids=new Set([...Object.values(doc?.linkedAssets||{}),doc?.primaryAssetId,card.assetId].filter(Boolean));
+  const ids=new Set([...Object.values(doc?.linkedAssets||{}),doc?.primaryAssetId,doc?.customCoverId,card.assetId].filter(Boolean));
   const text=JSON.stringify(card);
   for(const id of Object.keys(globalManifest.assets))if(text.includes(id))ids.add(id);
   for(const a of Object.values(globalManifest.assets))if(a.relativePath && text.includes(a.relativePath))ids.add(a.id);
@@ -83,6 +83,7 @@ try{
       normalized=await vault.migrateCanvasAttachments(card.id,{title:card.title,type:card.type});
       for(const [source,id] of Object.entries(plan.document.linkedAssets||{}))if(normalized.linkedAssets[source])map[id]=normalized.linkedAssets[source];
       if(plan.document.primaryAssetId && normalized.primaryAssetId)map[plan.document.primaryAssetId]=normalized.primaryAssetId;
+      if(plan.document.customCoverId && normalized.customCoverId)map[plan.document.customCoverId]=normalized.customCoverId;
     }
     const extra=plan.records.map(r=>r.id).filter(id=>!map[id]);
     if(extra.length)Object.assign(map,(await vault.migrateCardAssetReferences(card.id,{title:card.title,type:card.type},extra)).assetIds);
@@ -108,7 +109,7 @@ try{
   // Check all live structured references after publishing, before archiving originals.
   for(const card of latest.entries){
     const doc=await vault.loadCanvasDocument(card.id);
-    const ids=new Set([...Object.values(doc?.linkedAssets||{}),doc?.primaryAssetId,card.assetId].filter(Boolean));
+    const ids=new Set([...Object.values(doc?.linkedAssets||{}),doc?.primaryAssetId,doc?.customCoverId,card.assetId].filter(Boolean));
     for(const id of ids){const a=await vault.getAsset(id);assert.equal(a.ownerCardId,card.id);assert(a.relativePath && !legacyCategories.some(c=>a.relativePath.startsWith('文件/'+c+'/')),'仍有引用旧分类目录的附件');}
   }
   const updatedLegacy=structuredClone(globalManifest),archived=[];

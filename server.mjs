@@ -903,7 +903,7 @@ function queueCanvasStorage(action) {
 async function externalizeCanvasAssets(cardId,snapshot,{validateLinkedFiles=false,migration=false}={}) {
   const manifest=await readCardAttachments(cardId);
   const linkedAssets={...(snapshot.linkedAssets || {})};
-  const writing=migration || validateLinkedFiles || Object.keys(snapshot.assets || {}).length>0;
+  const writing=migration || validateLinkedFiles || Object.keys(snapshot.assets || {}).length>0 || Boolean(snapshot.customCoverUpload);
   const directory=writing ? await prepareCardDirectory(manifest,snapshot.cardInfo) : null;
   const resolved=new Map();
   const remapped=new Map();
@@ -916,9 +916,11 @@ async function externalizeCanvasAssets(cardId,snapshot,{validateLinkedFiles=fals
     if(stat.size!==asset.size)throw new Error('附件文件大小不符：'+(asset.displayName || asset.originalName)+'。请重新插入原文件后保存');
   };
   // Validate unchanged references before copying legacy files or publishing metadata.
+  if(snapshot.customCoverId && !snapshot.customCoverUpload && (await lookup(snapshot.customCoverId))?.category!=='图片')throw new Error('自定义封面必须是图片');
   if(validateLinkedFiles)for(const [sourceId,id] of Object.entries(linkedAssets)) {
     if(!Object.hasOwn(snapshot.assets,sourceId))await validate(await lookup(manifest.legacyAssets[id] || id));
   }
+  if(validateLinkedFiles && snapshot.customCoverId && !snapshot.customCoverUpload && (snapshot.customCoverSelected || snapshot.coverAssetId===snapshot.customCoverId))await validate(await lookup(snapshot.customCoverId));
   const own=async id=>{
     if(remapped.has(id))return remapped.get(id);
     let asset=await lookup(manifest.legacyAssets[id] || id);
@@ -926,7 +928,9 @@ async function externalizeCanvasAssets(cardId,snapshot,{validateLinkedFiles=fals
       const sourceStat=await fs.stat(storedAssetPath(asset)).catch(()=>null);
       const missing=!sourceStat?.isFile() || sourceStat.size!==asset.size;
       if(!migration || !missing)await validate(asset);
-      const target=await unusedAttachmentPath(directory,asset.originalName || asset.displayName);
+      const assetDirectory=asset.role==='card-cover' ? path.join(directory,'封面') : directory;
+      await fs.mkdir(assetDirectory,{recursive:true});
+      const target=await unusedAttachmentPath(assetDirectory,asset.originalName || asset.displayName);
       let hash=asset.contentHash;
       if(!missing) {
         await fs.copyFile(storedAssetPath(asset),target);
@@ -941,54 +945,64 @@ async function externalizeCanvasAssets(cardId,snapshot,{validateLinkedFiles=fals
     remapped.set(id,asset?.id || id);
     return asset?.id || id;
   };
-  for(const [sourceId,dataUrl] of Object.entries(snapshot.assets || {})) {
+  const saveInlineAsset=async (dataUrl,metadata,assetDirectory,previousId,role=null)=>{
     const match=/^data:([\w.+-]+\/[\w.+-]+);base64,([A-Za-z0-9+/=]*)$/.exec(dataUrl);
     if(!match)throw new Error('画布资源格式无效');
     const bytes=Buffer.from(match[2],'base64');
     const contentHash=crypto.createHash('sha256').update(bytes).digest('hex');
-    const previousId=linkedAssets[sourceId] || manifest.sourceAssets[sourceId];
     let asset=previousId ? await lookup(manifest.legacyAssets[previousId] || previousId) : null;
     if(asset?.ownerCardId!==cardId || asset.contentHash!==contentHash || asset.size!==bytes.length)asset=null;
-    const metadata=snapshot.assetMetadata?.[sourceId] || {};
     const originalName=typeof metadata.name==='string' ? path.basename(metadata.name).slice(0,180) : '';
     const extension=path.extname(originalName).toLowerCase() || extensions[match[1]] || '.bin';
     const category=match[1].startsWith('image/') ? '图片' : match[1].startsWith('video/') ? '视频' : match[1].startsWith('audio/') ? '音频' : categoryFor(originalName);
     const stat=asset ? await fs.stat(storedAssetPath(asset)).catch(()=>null) : null;
     if(!asset || !stat?.isFile() || stat.size!==bytes.length) {
-      const target=asset ? storedAssetPath(asset) : await unusedAttachmentPath(directory,originalName || '画布'+category+'-'+contentHash.slice(0,12)+extension);
+      const target=asset ? storedAssetPath(asset) : await unusedAttachmentPath(assetDirectory,originalName || '画布'+category+'-'+contentHash.slice(0,12)+extension);
       // A changed file is preserved. Explicit restoration only fills a missing original.
       if(stat?.isFile()) { asset=null; }
-      const destination=stat?.isFile() ? await unusedAttachmentPath(directory,originalName || path.basename(target)) : target;
+      const destination=stat?.isFile() ? await unusedAttachmentPath(assetDirectory,originalName || path.basename(target)) : target;
       await writeDurable(destination,bytes);
       if(await hashFile(destination)!==contentHash)throw new Error('画布文件保存校验失败');
       const savedStat=await fs.stat(destination);
       const media=await probeMedia(destination,category);
-      asset={id:asset?.id || ownedAssetId(),ownerCardId:cardId,originalName:originalName || path.basename(destination),displayName:path.basename(destination),extension,category,size:bytes.length,contentHash,storageMode:'copy',portable:true,relativePath:portableAssetPath(destination),absolutePath:null,importedAt:new Date().toISOString(),modifiedAt:savedStat.mtime.toISOString(),...media};
+      asset={id:asset?.id || ownedAssetId(),ownerCardId:cardId,originalName:originalName || path.basename(destination),displayName:path.basename(destination),extension,category,size:bytes.length,contentHash,storageMode:'copy',portable:true,relativePath:portableAssetPath(destination),absolutePath:null,importedAt:new Date().toISOString(),modifiedAt:savedStat.mtime.toISOString(),...media,...(role ? {role} : {})};
       for(const key of ['width','height','durationSeconds'])if(!asset[key] && Number.isFinite(metadata[key]) && metadata[key]>0)asset[key]=metadata[key];
       manifest.assets[asset.id]=asset;
     }
-    linkedAssets[sourceId]=asset.id;
     resolved.set(asset.id,asset);
     if(previousId)remapped.set(previousId,asset.id);
+    return asset.id;
+  };
+  for(const [sourceId,dataUrl] of Object.entries(snapshot.assets || {})) {
+    const previousId=linkedAssets[sourceId] || manifest.sourceAssets[sourceId];
+    linkedAssets[sourceId]=await saveInlineAsset(dataUrl,snapshot.assetMetadata?.[sourceId] || {},directory,previousId);
   }
   for(const [sourceId,id] of Object.entries(linkedAssets))linkedAssets[sourceId]=await own(id);
   const primaryAssetId=snapshot.primaryAssetId ? await own(snapshot.primaryAssetId) : null;
+  let customCoverId=snapshot.customCoverId ? await own(snapshot.customCoverId) : null;
+  if(snapshot.customCoverUpload){
+    const coverDirectory=path.join(directory,'封面');await fs.mkdir(coverDirectory,{recursive:true});
+    customCoverId=await saveInlineAsset(snapshot.customCoverUpload.dataUrl,snapshot.customCoverUpload,coverDirectory,customCoverId,'card-cover');
+  }
   const assetIds=[...new Set([...Object.values(linkedAssets),...(primaryAssetId ? [primaryAssetId] : [])])];
   if(validateLinkedFiles)for(const id of assetIds)await validate(resolved.get(id) || await lookup(id));
   if(writing) {
     Object.assign(manifest.sourceAssets,linkedAssets);
     await writeCardAttachments(manifest);
   }
-  const attachments=await Promise.all(assetIds.map(async id=>{
+  const describe=async id=>{
     const asset=resolved.get(id) || await lookup(id);
     if(!asset)return null;
     const stat=await fs.stat(storedAssetPath(asset)).catch(()=>null);
     return {id:asset.id,name:asset.displayName || asset.originalName,category:asset.category,extension:asset.extension,size:asset.size,width:asset.width,height:asset.height,durationSeconds:asset.durationSeconds,relativePath:asset.relativePath,...(!stat?.isFile() || stat.size!==asset.size ? {missing:true} : {})};
-  }));
-  const requestedCover=snapshot.coverSourceId ? linkedAssets[snapshot.coverSourceId] : remapped.get(snapshot.coverAssetId) || snapshot.coverAssetId;
+  };
+  const attachments=await Promise.all(assetIds.map(describe));
+  const customCover=customCoverId ? await describe(customCoverId) : null;
+  if(customCoverId && customCover?.category!=='图片')throw new Error('自定义封面必须是图片');
+  const requestedCover=snapshot.customCoverSelected ? customCoverId : snapshot.coverSourceId ? linkedAssets[snapshot.coverSourceId] : remapped.get(snapshot.coverAssetId) || snapshot.coverAssetId;
   const present=attachments.filter(Boolean);
-  const coverAssetId=present.some(asset=>asset.id===requestedCover && ['图片','视频'].includes(asset.category)) ? requestedCover : null;
-  return {update:snapshot.update,assets:{},linkedAssets,...(snapshot.fileCardLayoutVersion===1 ? {fileCardLayoutVersion:1} : {}),...(primaryAssetId ? {primaryAssetId} : {}),coverAssetId,attachments:present};
+  const coverAssetId=[...present,...(customCover ? [customCover] : [])].some(asset=>asset.id===requestedCover && ['图片','视频'].includes(asset.category)) ? requestedCover : null;
+  return {update:snapshot.update,assets:{},linkedAssets,...(snapshot.fileCardLayoutVersion===1 ? {fileCardLayoutVersion:1} : {}),...(primaryAssetId ? {primaryAssetId} : {}),coverAssetId,...(customCoverId ? {customCoverId,customCover} : {}),attachments:present};
 }
 
 async function writeCanvasSnapshot(cardId,snapshot) {
@@ -1029,6 +1043,12 @@ export async function saveCanvasDocument(cardId, snapshot) {
   if (snapshot.primaryAssetId && !/^[a-zA-Z0-9_-]{1,128}$/.test(snapshot.primaryAssetId)) throw new Error("画布关联资源无效");
   if (snapshot.coverAssetId && !/^[a-zA-Z0-9_-]{1,128}$/.test(snapshot.coverAssetId)) throw new Error('封面资源无效');
   if (snapshot.coverSourceId && !Object.hasOwn(snapshot.assets,snapshot.coverSourceId)) throw new Error('封面资源无效');
+  if(snapshot.customCoverId && !/^[a-zA-Z0-9_-]{1,128}$/.test(snapshot.customCoverId))throw new Error('自定义封面资源无效');
+  if(snapshot.customCoverUpload){
+    const upload=snapshot.customCoverUpload;
+    if(!upload || typeof upload!=='object' || typeof upload.name!=='string' || !/^data:image\/(png|jpeg|webp|gif|bmp|avif);base64,[A-Za-z0-9+/=]+$/.test(upload.dataUrl))throw new Error('请选择常见图片作为自定义封面');
+    if(!/\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(upload.name))throw new Error('自定义封面图片格式无效');
+  }
   canvasDocumentPath(cardId);
   return queueCanvasStorage(async () => {
     if(snapshot.requireRevision || Object.hasOwn(snapshot,'baseRevision')) {
@@ -1102,7 +1122,7 @@ export function createServer() {
       const presentation = await getAssetPresentation(assetPreviewRoute[1]);
       if (!presentation.previewUrl) return sendJson(res,404,{error:'暂无预览'});
       const previewPath = fileURLToPath(presentation.previewUrl);
-      const mime = path.extname(previewPath).toLowerCase() === '.svg' ? 'image/svg+xml' : ({'.png':'image/png','.webp':'image/webp','.gif':'image/gif','.avif':'image/avif'})[path.extname(previewPath).toLowerCase()] || 'image/jpeg';
+      const mime = path.extname(previewPath).toLowerCase() === '.svg' ? 'image/svg+xml' : ({'.png':'image/png','.webp':'image/webp','.gif':'image/gif','.avif':'image/avif','.bmp':'image/bmp'})[path.extname(previewPath).toLowerCase()] || 'image/jpeg';
       res.writeHead(200,{'Content-Type':mime,'Cache-Control':'private, max-age=300'});
       createReadStream(previewPath).pipe(res);
       return;

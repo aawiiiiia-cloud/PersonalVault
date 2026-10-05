@@ -79,6 +79,7 @@
     let selectedId = null;
     let hoveredId = null;
     let camera = { x:0,y:0,scale:1 };
+    let viewMode = 'fit';
     let pointer = null;
     let width = 1;
     let height = 1;
@@ -186,10 +187,8 @@
       emphasisFrame=global.requestAnimationFrame(step);
     }
 
-    function setHovered(id) {
-      if (id === hoveredId) return;
-      hoveredId=id;
-      canvas.style.cursor=id ? "pointer" : "grab";
+    function syncEmphasis() {
+      const id=hoveredId||selectedId;
       if (id) {
         if (emphasisId !== id) emphasisProgress=0;
         emphasisId=id;
@@ -198,6 +197,12 @@
       } else {
         animateEmphasis(0);
       }
+    }
+    function setHovered(id) {
+      if (id === hoveredId) return;
+      hoveredId=id;
+      canvas.style.cursor=id ? "pointer" : "grab";
+      syncEmphasis();
     }
 
     function startPanInertia(velocityX,velocityY) {
@@ -310,11 +315,24 @@
     function resize() {
       const rect = canvas.getBoundingClientRect();
       const ratio = Math.min(global.devicePixelRatio || 1,2);
+      if(rect.width<=0||rect.height<=0)return;
+      const previousWidth=width,previousHeight=height;
+      const center=worldPoint(width/2,height/2);
       width = Math.max(1,rect.width);
       height = Math.max(1,rect.height);
       canvas.width = Math.round(width * ratio);
       canvas.height = Math.round(height * ratio);
       context.setTransform(ratio,0,0,ratio,0,0);
+      if(graph.nodes.length){
+        cancelInertia();cancelZoomAnimation();
+        if(viewMode==='fit'||previousWidth<=1||previousHeight<=1)fitCamera();
+        else{
+          const focus=(viewMode==='focus'&&selectedId ? positions.get(selectedId) : null)||center;
+          // Compare absolute viewport extents so a resize round trip is reversible.
+          camera.scale=Math.max(.08,Math.min(3,camera.scale*Math.min(width,height)/Math.min(previousWidth,previousHeight)));
+          camera.x=width/2-focus.x*camera.scale;camera.y=height/2-focus.y*camera.scale;
+        }
+      }
       draw();
     }
 
@@ -355,6 +373,7 @@
     }
 
     function draw() {
+      const dark = global.document?.documentElement.dataset.theme === "dark";
       context.clearRect(0,0,width,height);
       const activeId = emphasisId;
       const activeNeighbors = activeId ? neighbors(activeId) : new Set();
@@ -371,7 +390,7 @@
         const a=renderedWorldPoint(sourceNode,sourceEntrance),b=renderedWorldPoint(targetNode,targetEntrance);
         if (!a || !b) return;
         const highlighted = activeId && (edge.source === activeId || edge.target === activeId);
-        const edgeTarget=highlighted ? .82 : .16;
+        const edgeTarget=highlighted ? .82 : .08;
         const entranceAlpha=Math.min(sourceEntrance.nodeOpacity,targetEntrance.nodeOpacity)*clamp((entranceProgress-.03)/.48);
         context.globalAlpha = (.3+(edgeTarget-.3)*emphasis)*entranceAlpha;
         context.strokeStyle = highlighted ? "#4a6cf7" : "#a4abba";
@@ -385,8 +404,8 @@
         const screen = screenPoint(point);
         const related = !activeId || node.id === activeId || activeNeighbors.has(node.id);
         const isolated = neighbors(node.id).size === 0;
-        context.globalAlpha = (1+((related ? 1 : .36)-1)*emphasis)*nodeEntrance.nodeOpacity;
-        context.fillStyle = nodeColor(node.type,nodeInfluence(node));
+        context.globalAlpha = (1+((related ? 1 : .18)-1)*emphasis)*nodeEntrance.nodeOpacity;
+        context.fillStyle = dark && ["project","area"].includes(node.type) ? (node.type === "area" ? "#9fd6b7" : "#bdc8df") : nodeColor(node.type,nodeInfluence(node));
         context.beginPath();
         const nodeHover=node.id === activeId ? emphasis : 0;
         const radius=nodeRadius(node,{ selected:node.id === selectedId })*zoomNodeScale*hoverNodeScale(nodeHover);
@@ -401,14 +420,14 @@
         context.shadowBlur=0;
         context.shadowOffsetY=0;
         if (node.id === selectedId) {
-          context.strokeStyle = "#1d1f26"; context.lineWidth = clamp(2*zoomNodeScale,.8,3.5); context.stroke();
+          context.strokeStyle = dark ? "#e4e8f1" : "#1d1f26"; context.lineWidth = clamp(2*zoomNodeScale,.8,3.5); context.stroke();
         } else if (isolated) {
           context.strokeStyle = "#ffffff"; context.lineWidth = clamp(2*zoomNodeScale,.8,3.5); context.stroke();
         }
         if (labelStyle.opacity > .015) {
-          const hoverAlpha=.92+((related ? .92 : .34)-.92)*emphasis;
+          const hoverAlpha=.92+((related ? .92 : .16)-.92)*emphasis;
           context.globalAlpha = labelStyle.opacity * hoverAlpha * nodeEntrance.labelOpacity;
-          context.fillStyle = "#474c59";
+          context.fillStyle = dark ? "#cdd5e5" : "#474c59";
           context.font = `${labelStyle.fontSize.toFixed(2)}px 'Microsoft YaHei', sans-serif`;
           context.textAlign = "center";
           context.textBaseline = "top";
@@ -435,27 +454,29 @@
 
     function selectNode(id) {
       selectedId = graph.nodes.some(node => node.id === id) ? id : null;
+      syncEmphasis();
       onSelect(selectedId ? graph.nodes.find(node => node.id === selectedId) : null,graph);
       draw();
     }
 
-    function fitView() {
-      finishEntrance(false);
-      cancelInertia();
-      cancelZoomAnimation();
-      if (!graph.nodes.length) { camera={ x:width/2,y:height/2,scale:1 }; draw(); return; }
+    function fitCamera() {
+      if (!graph.nodes.length) { camera={ x:width/2,y:height/2,scale:1 }; return; }
       const points = graph.nodes.map(node => positions.get(node.id)).filter(Boolean);
       const minX=Math.min(...points.map(point=>point.x)), maxX=Math.max(...points.map(point=>point.x));
       const minY=Math.min(...points.map(point=>point.y)), maxY=Math.max(...points.map(point=>point.y));
       const spanX=Math.max(120,maxX-minX+120), spanY=Math.max(120,maxY-minY+120);
-      const scale=Math.max(.28,Math.min(1.35,Math.min(width/spanX,height/spanY)));
+      const scale=Math.max(.08,Math.min(1.35,Math.min(width/spanX,height/spanY)));
       camera={ x:width/2-((minX+maxX)/2)*scale,y:height/2-((minY+maxY)/2)*scale,scale };
+    }
+    function fitView() {
+      viewMode='fit';finishEntrance(false);cancelInertia();cancelZoomAnimation();fitCamera();
       draw();
     }
 
     function focusNode(id) {
       const point = positions.get(id);
       if (!point) return false;
+      viewMode='focus';
       finishEntrance(false);
       cancelInertia();
       cancelZoomAnimation();
@@ -474,6 +495,7 @@
 
     canvas.addEventListener("wheel",event => {
       event.preventDefault();
+      viewMode='manual';
       finishEntrance(false);
       cancelInertia();
       const rect=canvas.getBoundingClientRect(), x=event.clientX-rect.left, y=event.clientY-rect.top;
@@ -496,6 +518,7 @@
         const dx=x-pointer.lastX, dy=y-pointer.lastY;
         if (Math.abs(dx)+Math.abs(dy)>2) pointer.moved=true;
         if (pointer.mode === "pan") {
+          viewMode='manual';
           camera.x+=dx; camera.y+=dy;
           pointer.velocityX=pointer.velocityX*.6+dx*.4;
           pointer.velocityY=pointer.velocityY*.6+dy*.4;
@@ -512,9 +535,10 @@
       if (pointer?.id !== event.pointerId) return;
       const completed=pointer;
       if (pointer.mode === "node") {
-        if (!pointer.moved) selectNode(selectedId === pointer.nodeId ? null : pointer.nodeId);
+        if (!pointer.moved) selectNode(pointer.nodeId);
         else savePosition(pointer.nodeId);
       } else if (!pointer.moved) {
+        setHovered(null);
         selectNode(null);
       }
       pointer=null;
@@ -531,6 +555,7 @@
 
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
+    global.addEventListener?.("workbench-theme-change", draw);
 
     return {
       setGraph(nextGraph) {
@@ -554,7 +579,7 @@
       getState:()=>({
         camera:{...camera},selectedId,hoveredId,nodeCount:graph.nodes.length,edgeCount:graph.edges.length,
         inertiaActive:inertiaFrame !== null,zoomAnimating:zoomFrame !== null,zoomTarget:zoomTarget ? {...zoomTarget} : null,
-        emphasisProgress,emphasisAnimating:emphasisFrame !== null,
+        emphasisId,emphasisProgress,emphasisAnimating:emphasisFrame !== null,
         entranceActive:entranceFrame !== null,entranceProgress,entranceRunCount,
         viewport:{ width,height },
         selectedScreen:(()=>{
@@ -563,7 +588,7 @@
           return point ? screenPoint(point) : null;
         })()
       }),
-      destroy(){ finishEntrance(false); cancelInertia(); cancelZoomAnimation(); cancelEmphasisAnimation(); observer.disconnect(); }
+      destroy(){ finishEntrance(false); cancelInertia(); cancelZoomAnimation(); cancelEmphasisAnimation(); observer.disconnect(); global.removeEventListener?.("workbench-theme-change", draw); }
     };
   }
 

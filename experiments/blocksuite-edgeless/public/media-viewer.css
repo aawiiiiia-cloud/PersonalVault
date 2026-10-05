@@ -1,0 +1,44 @@
+:root { color-scheme: light; font-family: Inter, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif; }
+:root[data-theme="dark"] { color-scheme: dark; }
+[data-theme="dark"] body { color: #e4e8f1; background: #11141c; }
+[data-theme="dark"] .viewer-header, [data-theme="dark"] .viewer-footer,
+[data-theme="dark"] #loading { color: #e4e8f1; background: #242a37; border-color: #414a5e; }
+[data-theme="dark"] #stage { background-color: #171b24; background-image: radial-gradient(#394358 .8px, transparent .8px); }
+[data-theme="dark"] .viewer-navigation button, [data-theme="dark"] .zoom-controls button { color: #e4e8f1; background: #30384a; border-color: #4a5368; }
+[data-theme="dark"] #media-name, [data-theme="dark"] #page-count { color: #b5c0d5; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+body { display: flex; flex-direction: column; color: #1d1f26; background: #f6f7fa; }
+button { font: inherit; cursor: pointer; }
+.viewer-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; height: 58px; flex: none; padding: 0 18px; border-bottom: 1px solid #e5e7ed; background: #fff; }
+.electron .viewer-header { -webkit-app-region: drag; user-select:none; }
+.electron .viewer-navigation { -webkit-app-region: no-drag; }
+.viewer-heading { display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1; }
+.viewer-heading select { flex: none; height:32px; padding:0 28px 0 10px; border:1px solid #d9dce5; border-radius:7px; background:#fff; color:#474c59; font:inherit; font-size:13px; -webkit-app-region:no-drag; }
+[data-theme="dark"] .viewer-heading select {color:#e4e8f1;background:#30384a;border-color:#4a5368;}
+.viewer-heading select:focus { outline:none; box-shadow:none; }
+.viewer-heading select:focus-visible { outline:1px solid #78808f; outline-offset:2px; }
+[data-theme="dark"] .viewer-heading select:focus-visible { outline-color:#b5c0d5; }
+.viewer-heading strong { flex: none; font-size: 14px; }
+#media-name { overflow: hidden; color: #78808f; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.viewer-navigation, .zoom-controls { display: flex; align-items: center; gap: 8px; flex: none; }
+.viewer-navigation button, .zoom-controls button { min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid #d9dce5; border-radius: 7px; background: #fff; color: #474c59; }
+.viewer-navigation button { display:inline-flex; align-items:center; justify-content:center; line-height:1; margin:0; }
+.viewer-navigation button svg { display:block; width:16px; height:16px; flex:none; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.viewer-navigation button.window-pin-button { height:32px; padding:0 8px; margin:0; }
+.viewer-navigation button:hover:not(:disabled), .zoom-controls button:hover:not(:disabled) { border-color: #4a6cf7; color: #3a57d4; background: #f3f6ff; }
+button:disabled { opacity: .4; cursor: default; }
+#close { margin:0; }
+#page-count { min-width: 48px; color: #78808f; font-size: 12px; text-align: center; white-space: nowrap; }
+#stage { position: relative; flex: 1; min-height: 0; overflow: hidden; background-color: #f6f7fa; background-image: radial-gradient(#d9e2f2 .8px, transparent .8px); background-size: 18px 18px; cursor: grab; touch-action: none; }
+#stage.dragging { cursor: grabbing; }
+#stage img, #stage video { position: absolute; top: 50%; left: 50%; display: block; max-width: none; max-height: none; transform-origin: center; user-select: none; -webkit-user-drag: none; box-shadow: 0 8px 32px #1d1f261c; }
+#stage video { background: #fff; }
+#loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 10px 14px; border: 1px solid #e5e7ed; border-radius: 8px; background: #fff; color: #78808f; font-size: 13px; box-shadow: 0 4px 18px #1d1f260d; }
+.viewer-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 54px; flex: none; padding: 0 18px; border-top: 1px solid #e5e7ed; background: #fff; }
+.viewer-footer > span { color: #a4abba; font-size: 11px; white-space: nowrap; }
+.zoom-controls button { font-size: 17px; }
+.zoom-controls #fit { padding: 0 10px; font-size: 12px; }
+#zoom-value { min-width: 52px; color: #474c59; font-size: 12px; text-align: center; }
+@media (max-width: 600px) { .viewer-footer > span { display: none; } .viewer-heading { gap: 8px; } .viewer-header, .viewer-footer { padding-inline: 10px; } }

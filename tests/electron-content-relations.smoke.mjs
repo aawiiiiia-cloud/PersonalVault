@@ -33,8 +33,9 @@ await vault.syncCards({ schemaVersion:1, cards:[
   { id:"source-a", type:"source", title:"资料 A", relatedRefs:["project-b"], createdAt:when, updatedAt:when },
   { id:"trash-a", type:"source", title:"回收站资料", deletedAt:when, createdAt:when, updatedAt:when }
 ] });
-const child = spawn(electron,[`--remote-debugging-port=${port}`,`--user-data-dir=${userData}`,"--disable-gpu","--in-process-gpu","."],{
-  cwd:path.resolve(import.meta.dirname,".."), env:{ ...process.env,PERSONAL_VAULT_PATH:vaultPath,APPDATA:appData,LOCALAPPDATA:appData }, stdio:["ignore","pipe","pipe"], windowsHide:true
+// Contain Windows native spellchecker scratch paths in the disposable test root.
+const child = spawn(electron,[`--remote-debugging-port=${port}`,`--user-data-dir=${userData}`,"--disable-gpu","--in-process-gpu",path.resolve(import.meta.dirname,"..")],{
+  cwd:root, env:{ ...process.env,PERSONAL_VAULT_PATH:vaultPath,APPDATA:appData,LOCALAPPDATA:appData }, stdio:["ignore","pipe","pipe"], windowsHide:true
 });
 let childOutput="";
 let childExit=null;

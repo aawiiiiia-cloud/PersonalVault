@@ -1,5 +1,6 @@
 # Installed dependencies and generated runtime files
 node_modules/
+.pnpm-store/
 .electron-cache/
 .electron-*/
 .model-cache/
@@ -26,6 +27,13 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+# Disposable browser/Electron profiles, screenshots, fixtures and local probes
+/ui-demos/previews/
+/experiments/blocksuite-edgeless/tools/*.png
+
+# Windows native spellchecker scratch directories from sandboxed test launches
+**/Microsoft/Spelling/
 
 # Internal cross-device handoff records
 PM-项目交接-*.md

@@ -1,0 +1,76 @@
+/* Shared frosted material for dashboard stacks and collection cards. */
+:root {
+  --workbench-frost-background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.025)),rgba(250,252,255,.46);
+  --workbench-frost-edge:rgba(110,125,146,.22);
+  --workbench-frost-shadow:inset 0 1px 1px rgba(255,255,255,.55),inset 0 -1px 8px rgba(130,145,166,.08),0 4px 14px rgba(0,0,0,.09);
+  --capture-frost-background:linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.015)),rgba(25,27,32,.94);
+  --capture-frost-ink:#ffffff;
+}
+:root[data-theme="dark"] {
+  --workbench-frost-background:linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.015)),rgba(32,35,44,.46);
+  --workbench-frost-edge:rgba(213,225,242,.18);
+  --workbench-frost-shadow:inset 0 1px 1px rgba(255,255,255,.13),inset 0 -1px 8px rgba(255,255,255,.025),0 4px 16px rgba(0,0,0,.24);
+  --capture-frost-background:linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.015)),rgba(215,226,248,.94);
+  --capture-frost-ink:#111723;
+}
+#collectionList .entry-card {
+  --collection-glass-outline:var(--workbench-frost-edge);
+  --collection-glass-shadow:var(--workbench-frost-shadow);
+  background:var(--workbench-frost-background);
+  border-color:var(--workbench-frost-edge);
+  box-shadow:var(--workbench-frost-shadow);
+  backdrop-filter:blur(24px) saturate(125%);
+  -webkit-backdrop-filter:blur(24px) saturate(125%);
+}
+:root #collectionList .entry-card.selected,
+:root[data-theme] #collectionList .entry-card.selected {
+  background:var(--workbench-frost-background);
+  border-color:var(--accent);
+  box-shadow:inset 0 0 0 1px var(--accent),var(--workbench-frost-shadow);
+}
+
+/* Match the marked sidebar actions, dashboard shortcuts and global search. */
+#quickCapture,#openAssetImport,.home-header-controls .home-quick-actions button,#searchInput {
+  background:var(--workbench-frost-background);
+  color:var(--ink);
+  border:1px solid var(--workbench-frost-edge);
+  box-shadow:var(--workbench-frost-shadow);
+  backdrop-filter:blur(24px) saturate(125%);
+  -webkit-backdrop-filter:blur(24px) saturate(125%);
+  transition:border-color .18s ease,box-shadow .18s ease;
+}
+#quickCapture:hover,#openAssetImport:hover,.home-header-controls .home-quick-actions button:hover,#searchInput:hover {
+  background:var(--workbench-frost-background);
+  color:var(--ink);
+  border-color:var(--muted);
+}
+#quickCapture:focus-visible,#openAssetImport:focus-visible,.home-header-controls .home-quick-actions button:focus-visible,#searchInput:focus {
+  border-color:var(--accent);
+  box-shadow:var(--workbench-frost-shadow),0 0 0 3px var(--accent-soft);
+}
+#quickCapture,#quickCapture:hover,
+.home-header-controls .home-quick-actions button[data-create="capture"],
+.home-header-controls .home-quick-actions button[data-create="capture"]:hover {
+  background:var(--capture-frost-background);
+  color:var(--capture-frost-ink);
+  font-weight:650;
+}
+#searchInput {padding-right:34px;}
+
+/* Graph chrome shares the card material; the canvas stays transparent. */
+:root .graph-toolbar,
+:root .graph-workspace {
+  background:var(--workbench-frost-background);
+  border-color:var(--workbench-frost-edge);
+  box-shadow:var(--workbench-frost-shadow);
+  backdrop-filter:blur(24px) saturate(125%);
+  -webkit-backdrop-filter:blur(24px) saturate(125%);
+}
+:root .graph-workspace .graph-canvas-wrap,
+:root .graph-workspace .graph-inspector {background:transparent;}
+:root .graph-canvas-wrap canvas:focus-visible {box-shadow:inset 0 0 0 1px var(--muted);}
+:root .graph-resize-handle::before {background:var(--workbench-frost-edge);}
+:root .graph-resize-handle:is(:hover,:focus-visible)::before,
+:root body.is-resizing-graph .graph-resize-handle::before {background:var(--muted);}
+.activity-tooltip {position:fixed;z-index:100;pointer-events:none;max-width:calc(100vw - 16px);padding:7px 10px;border:1px solid var(--workbench-frost-edge);border-radius:8px;background:var(--workbench-frost-background);color:var(--ink);box-shadow:var(--workbench-frost-shadow);backdrop-filter:blur(24px) saturate(125%);font:400 12px/1.5 var(--font-ui);white-space:nowrap;}
+.activity-tooltip[hidden] {display:none;}

@@ -70,6 +70,9 @@ for(const type of ["project","knowledge","source"]){
   assert.equal(converted.content,"");
 }
 assert.equal(Object.hasOwn(Data.normalizeEntry({id:"p",type:"project",title:"无原文"}),"originalCapture"),false);
+const canvasCard=Data.normalizeEntry({id:"canvas-card",type:"knowledge",title:"画布卡片",content:"新正文",canvasVersion:1,legacyContent:"<p>旧正文</p>"});
+assert.equal(canvasCard.canvasVersion,1);
+assert.equal(canvasCard.legacyContent,"<p>旧正文</p>");
 
 const sandbox=await mkdtemp(path.join(tmpdir(),"workbench-card-v2-"));
 const vaultPath=path.join(sandbox,"vault");

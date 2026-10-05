@@ -91,7 +91,9 @@ function ftsQuery(value) {
   const terms = [...new Set([...plainTerms, ...latinTerms, ...bigrams])]
     .map(term => term.replace(/["*:^(){}\[\]]/g, " ").trim())
     .filter(Boolean);
-  return terms.map(term => `"${term.replaceAll('"', '""')}"`).join(" AND ");
+  // English fragments such as crop should match cropdetect; IDs and numbers
+  // still use complete tokens so their meaning does not become ambiguous.
+  return terms.map(term => `"${term.replaceAll('"', '""')}"${/^[A-Za-z]{2,}$/.test(term) ? "*" : ""}`).join(" AND ");
 }
 
 function createSchema(db) {

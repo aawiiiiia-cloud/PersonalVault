@@ -46,6 +46,20 @@ assert.equal(state.entries.find(entry=>entry.id === "source-a").deletedAt,undefi
 assert.throws(()=>Batch.applyBatchToState(state,selected,"set-reading-status",{ readingStatus:"invalid" },now));
 assert.throws(()=>Batch.applyBatchToState(state,selected,"remove-areas",{ areaIds:[] },now));
 
+for (const [type,field,status] of [["project","status","done"],["knowledge","confidence","reviewed"],["source","readingStatus","processed"]]) {
+  const mixed={entries:[{id:"target",type,areaRefs:[]},{id:"other",type:"area"}]};
+  const ids=new Set(["target","other"]);
+  assert.deepEqual(Batch.reconcileSelection(ids,mixed.entries,type),new Set(["target"]));
+  const result=Batch.applyBatchToState(mixed,ids,"set-status",{type,status},now);
+  assert.equal(result.affected,1);
+  assert.equal(result.state.entries[0][field],status);
+  assert.equal(result.state.entries[1],mixed.entries[1]);
+  const added=Batch.applyBatchToState(mixed,ids,"add-areas",{type,areaIds:["area-a"]},now);
+  assert.equal(Batch.countAreaRemoval(added.state.entries,ids,["area-a"],type),1);
+  assert.equal(Batch.applyBatchToState(mixed,ids,"trash",{type},now).affected,1);
+  assert.throws(()=>Batch.applyBatchToState(mixed,ids,"set-status",{type,status:"invalid"},now));
+}
+
 let created=0;
 const merged=Batch.mergeImportedAssets(entries,[{ id:"asset-a" },{ id:"asset-new" },{ id:"asset-new" }],asset=>({ id:`new-${++created}`,type:"source",title:asset.id,assetId:asset.id }));
 assert.equal(merged.reused,2);

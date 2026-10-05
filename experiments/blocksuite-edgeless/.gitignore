@@ -1,0 +1,6 @@
+node_modules/
+dist/
+dist-check-*/
+
+# 验证管道的生成产物（截图与报告）
+.canvas-eyes/

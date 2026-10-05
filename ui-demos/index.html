@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>知行台 · UI 设计提案</title>
+  <link rel="stylesheet" href="../assets/fonts/fonts.css">
+  <link rel="stylesheet" href="demo.css">
+  <script src="demo.js" defer></script>
+</head>
+<body data-theme="orbit">
+  <header class="proposal-bar">
+    <span class="proposal-label">知行台 <span>DESIGN PLAYGROUND</span></span>
+    <div class="theme-switch" role="group" aria-label="设计方案">
+      <button data-theme-choice="orbit"><span class="swatch orbit"></span>01 蓝紫引力</button>
+      <button data-theme-choice="mint"><span class="swatch mint"></span>02 薄荷动线</button>
+      <button data-theme-choice="pop"><span class="swatch pop"></span>03 灵感积木</button>
+    </div>
+    <span class="demo-note">交互演示 · 独立于正式工作台</span>
+  </header>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="./index.html"><span class="brand-logo">知<span></span></span><span><b>知行台</b><small>想法，开始发生。</small></span></a>
+      <button class="quick-add" data-action="new"><span data-icon="plus"></span>记下一个想法<span class="key">N</span></button>
+      <nav aria-label="主导航">
+        <span class="nav-label">你的空间</span>
+        <button data-section="home"><span data-icon="home"></span>工作台<span class="nav-dot"></span></button>
+        <button data-section="inbox"><span data-icon="inbox"></span>随手记<small>03</small></button>
+        <button data-section="areas"><span data-icon="areas"></span>领域</button>
+        <div class="area-links"><button data-domain="AI 工具与自动化"><i></i>AI 工具与自动化</button><button data-domain="创意与设计"><i></i>创意与设计</button></div>
+        <button data-section="graph"><span data-icon="graph"></span>关系图谱</button>
+        <span class="nav-label">内容库</span>
+        <button data-section="projects" class="active"><span data-icon="project"></span>项目<small>06</small></button>
+        <button data-section="knowledge"><span data-icon="spark"></span>知识<small>04</small></button>
+        <button data-section="sources"><span data-icon="source"></span>资料<small>04</small></button>
+      </nav>
+      <div class="sidebar-bottom"><div class="space-mark"><span class="space-avatar">Z</span><div><b>我的知识空间</b><small>本地保存 · 自由连接</small></div><span data-icon="chevron"></span></div><button data-action="trash"><span data-icon="trash"></span>回收站</button><button data-action="data"><span data-icon="settings"></span>数据管理</button></div>
+    </aside>
+    <main>
+      <div class="workspace-top"><span class="breadcrumb">我的空间 <span>/</span> <b id="breadcrumb">项目</b></span><label class="search"><span data-icon="search"></span><input id="search" placeholder="搜索标题、内容…" aria-label="搜索内容"><kbd>Ctrl K</kbd></label><span class="user-avatar">Z</span></div>
+      <section class="page-heading"><div><div class="eyebrow"><span></span><span id="eyebrow">MAKE THINGS HAPPEN</span></div><h1 id="page-title">把想法，做成项目<span class="heading-spark">✳</span></h1><p id="page-description">从一个问题出发，在实践中找到自己的答案。</p></div><button class="new-button" data-action="new"><span data-icon="plus"></span><span id="new-label">新建项目</span></button></section>
+      <div class="collection-toolbar"><div class="filters" id="filters" role="group" aria-label="状态筛选"></div><div class="toolbar-right"><label class="domain-select"><span data-icon="areas"></span><select id="domain" aria-label="领域筛选"><option value="all">全部领域</option><option>AI 工具与自动化</option><option>创意与设计</option></select></label><div class="display-switch" role="group" aria-label="视图切换"><button data-display="gallery" aria-label="画廊视图"><span data-icon="grid"></span></button><button data-display="list" aria-label="列表视图"><span data-icon="list"></span></button></div></div></div>
+      <div class="collection-meta"><span><b id="item-count">6</b> <span id="count-label">个项目</span><span class="meta-dot">·</span>按最近更新</span><span id="collection-tagline">每一步，都算数。</span></div>
+      <section id="collection" class="gallery" aria-label="内容列表"></section>
+      <div id="empty" hidden><span data-icon="search"></span><h3>还没有匹配的内容</h3><p>试试其他关键词或筛选条件。</p></div>
+      <footer class="workspace-footer"><span class="footer-glyph">✳</span> 好想法需要一个落脚点。<span>知行台 / YOUR SECOND SPACE</span></footer>
+    </main>
+  </div>
+  <dialog id="card-dialog">
+    <div class="dialog-top"><span id="dialog-type">项目</span><span>创建于 2026-09-04</span><button data-action="close" aria-label="关闭卡片"><span data-icon="close"></span></button></div>
+    <div class="dialog-heading"><h2 id="dialog-title"></h2><div><button id="cancel-edit" hidden>取消</button><button id="edit-toggle">编辑</button></div></div>
+    <div class="dialog-meta"><span class="tag" id="dialog-domain"></span><span id="dialog-status" class="status"></span></div>
+    <div class="dialog-scroll"><div class="relations"><span>关联内容</span><button class="relation-chip" id="related-link">通用核心与业务外壳应该分开 <span>↗</span></button></div><div class="canvas" id="canvas"><span class="canvas-caption"><i></i>自由画布</span><div class="canvas-scene" id="canvas-scene"><div class="canvas-note"><span class="note-label">想法与行动</span><h3 id="canvas-title"></h3><p id="canvas-copy"></p><div class="note-rule"></div><p>下一步：把判断变成一次可验证的小实验。</p></div><div class="canvas-small"><span data-icon="spark"></span><b>先做一个小版本</b><p>把复杂问题拆成可以行动的部分。</p></div><div class="canvas-table"><b>行动清单</b><div>事项<span>状态</span></div><div>建立测试样本<span class="tiny-status">进行中</span></div><div>验证核心能力<span>待开始</span></div></div></div><div class="canvas-toolbar"><button id="zoom-out" aria-label="缩小画布">−</button><span id="zoom-value">100%</span><button id="zoom-in" aria-label="放大画布">+</button><button id="zoom-fit">复位</button></div></div><div class="dialog-extras"><h3>目标与场景</h3><p id="goal-copy">找到适合当前场景的做法，并形成可复用的工作流程。</p><h3>待办列表</h3><label><input type="checkbox" disabled><span>完成第一轮验证，记录结果与下一步。</span></label></div><small class="modified">修改于 2026-10-01</small></div>
+  </dialog>
+  <div id="toast" role="status"></div>
+</body>
+</html>

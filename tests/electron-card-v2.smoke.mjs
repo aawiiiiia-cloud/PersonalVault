@@ -20,7 +20,8 @@ await vault.syncCards({schemaVersion:1,cards:[
   {id:"source-a",type:"source",title:"原有资料",rawContent:"原有资料文字",assetId:"asset-a",assetPath:"素材/asset.mp4",assetCategory:"视频",createdAt:when,updatedAt:when}
 ]});
 const port=await new Promise((resolve,reject)=>{const probe=createServer();probe.once("error",reject);probe.listen(0,"127.0.0.1",()=>{const address=probe.address();probe.close(()=>resolve(address.port));});});
-const child=spawn(electron,["--remote-debugging-port="+port,"--user-data-dir="+userData,"--disable-gpu","--in-process-gpu","."],{cwd:path.resolve(import.meta.dirname,".."),env:{...process.env,PERSONAL_VAULT_PATH:vaultPath,APPDATA:appData,LOCALAPPDATA:appData},stdio:["ignore","pipe","pipe"],windowsHide:true});
+// Contain Windows native spellchecker scratch paths in the disposable test root.
+const child=spawn(electron,["--remote-debugging-port="+port,"--user-data-dir="+userData,"--disable-gpu","--in-process-gpu",path.resolve(import.meta.dirname,"..")],{cwd:root,env:{...process.env,PERSONAL_VAULT_PATH:vaultPath,APPDATA:appData,LOCALAPPDATA:appData},stdio:["ignore","pipe","pipe"],windowsHide:true});
 let output="";
 child.stdout.on("data",chunk=>{output+=chunk.toString();});
 child.stderr.on("data",chunk=>{output+=chunk.toString();});

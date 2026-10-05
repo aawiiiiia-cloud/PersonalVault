@@ -1,0 +1,53 @@
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import {tmpdir} from 'node:os';
+import crypto from 'node:crypto';
+import {mkdtemp,mkdir,writeFile,readFile,readdir,rm,stat} from 'node:fs/promises';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+
+const temporary=await mkdtemp(path.join(tmpdir(),'card-attachment-migration-'));
+const root=path.join(temporary,'vault');process.env.PERSONAL_VAULT_PATH=root;
+try {
+  const vault=await import('../server.mjs');
+  await vault.ensureVault();
+  const images=path.join(root,'文件','图片');await mkdir(images,{recursive:true});
+  const bytes=Buffer.from([1,2,3]),hash=crypto.createHash('sha256').update(bytes).digest('hex');
+  await writeFile(path.join(images,'shared.jpg'),bytes);
+  await writeFile(path.join(images,'unregistered.jpg'),Buffer.from([4,5,6]));
+  const shared={id:'legacy-shared',originalName:'shared.jpg',displayName:'shared.jpg',relativePath:'文件/图片/shared.jpg',size:3,contentHash:hash,category:'图片',extension:'.jpg'};
+  const lost={...shared,id:'legacy-lost',originalName:'lost.jpg',displayName:'lost.jpg',relativePath:'文件/图片/lost.jpg'};
+  await writeFile(path.join(root,'系统','assets-manifest.json'),JSON.stringify({assets:{[shared.id]:shared,[lost.id]:lost}}));
+  const cards=[{id:'A',title:'甲卡',type:'source',canvasVersion:1,assetId:shared.id,assetPath:shared.relativePath},{id:'B',title:'乙卡',type:'knowledge',canvasVersion:1}];
+  await vault.syncCards({cards});
+  const canvases=path.join(root,'系统','自由画布');await mkdir(canvases,{recursive:true});
+  const documents=[{update:'AQID',assets:{},linkedAssets:{one:shared.id,two:lost.id},primaryAssetId:shared.id,coverAssetId:shared.id},{update:'AQID',assets:{},linkedAssets:{one:shared.id},coverAssetId:shared.id}];
+  for(const [i,c] of cards.entries())await writeFile(path.join(canvases,c.id+'.json'),JSON.stringify(documents[i]));
+  const run=promisify(execFile),script=path.resolve('scripts/migrate-attachment-folders.mjs');
+  const dry=JSON.parse((await run(process.execPath,[script,'--vault',root])).stdout);
+  assert.equal(dry.mode,'dry-run');assert.equal(dry.missing.length,1);
+  assert.deepEqual(JSON.parse(await readFile(path.join(canvases,'A.json'),'utf8')),documents[0]);
+  const report=JSON.parse((await run(process.execPath,[script,'--vault',root,'--apply','--archive-old'])).stdout);
+  assert.equal(report.status,'complete');assert.equal(report.verifiedCopies,2);assert.equal(report.missing.length,1);
+  const a=await vault.loadCanvasDocument('A'),b=await vault.loadCanvasDocument('B');
+  assert.notEqual(a.linkedAssets.one,b.linkedAssets.one);
+  assert.equal(a.attachments.find(x=>x.id===a.linkedAssets.two).missing,true);
+  assert.equal(a.update,documents[0].update);assert.equal(b.update,documents[1].update);
+  assert.equal(a.coverAssetId,a.primaryAssetId);
+  assert.deepEqual(await readFile((await vault.getAsset(a.linkedAssets.one)).absolutePath),bytes);
+  assert.deepEqual(await readFile((await vault.getAsset(b.linkedAssets.one)).absolutePath),bytes);
+  assert.equal(await stat(images).then(()=>true,()=>false),false);
+  const archived=path.join(report.backup,'旧文件','图片');
+  assert.deepEqual((await readdir(archived)).sort(),['shared.jpg','unregistered.jpg']);
+  assert.deepEqual(await readFile((await vault.getAsset(shared.id)).absolutePath),bytes,'old IDs remain resolvable from backup');
+  assert.deepEqual(JSON.parse(await readFile(path.join(report.backup,'metadata','系统','自由画布','A.json'),'utf8')),documents[0]);
+  const latest=(await vault.loadLatestState()).state;
+  assert.equal(latest.entries[0].assetId,a.primaryAssetId);
+  assert.equal(latest.entries[0].assetPath,a.attachments.find(x=>x.id===a.primaryAssetId).relativePath);
+  assert.equal(latest.entries.length,2);
+  await assert.rejects(vault.saveCanvasDocument('A',a),/附件文件缺失/,'normal saves stay strict after migration');
+  console.log('PASS offline migration, independent copies, missing originals, primary/cover references, unregistered file preservation and backup');
+} finally {
+  assert(path.resolve(temporary).startsWith(path.resolve(tmpdir())+path.sep));
+  await rm(temporary,{recursive:true,force:true});
+}

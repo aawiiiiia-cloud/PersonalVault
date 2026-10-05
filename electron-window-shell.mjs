@@ -4,7 +4,7 @@ export const TITLEBAR_OVERLAY = Object.freeze({
   // Keep the native controls above the page, but let the renderer titlebar and
   // modal backdrop remain visible underneath the Window Controls Overlay.
   color: "#00000000",
-  symbolColor: "#474c59",
+  symbolColor: "#9299a8",
   height: TITLEBAR_HEIGHT
 });
 

@@ -47,7 +47,7 @@
       if(actualTag==="div" && node.hasAttribute("data-image-row")) {
         attributes=' data-image-row="true"';
         const layout=node.getAttribute("data-image-layout");
-        if(["full","left","right"].includes(layout)) attributes+=` data-image-layout="${layout}"`;
+        if(["full","left","right","inline"].includes(layout)) attributes+=` data-image-layout="${layout}"`;
         if(node.hasAttribute("data-image-paired")) attributes+=' data-image-paired="true"';
       }
       if(actualTag==="div" && node.hasAttribute("data-image-group")) attributes=' data-image-group="true"';
@@ -67,7 +67,9 @@
       const color=colorHex(node.style.color || (tag==="font" ? node.getAttribute("color") : ""));
       const background=colorHex(node.style.backgroundColor);
       const size=fontSizePx(node.style.fontSize || (tag==="font" ? node.getAttribute("size") : ""));
-      const style=[color && `color:${color}`,background && `background-color:${background}`,size && `font-size:${size}px`].filter(Boolean).join(";");
+      const textBlock=["p","h1","h2","h3","h4","li","blockquote"].includes(actualTag) || (actualTag==="div" && !node.hasAttribute("data-image-row") && !node.hasAttribute("data-image-group"));
+      const lineHeight=["1.4","1.65","2.2"].includes(node.style.lineHeight) && textBlock ? node.style.lineHeight : "";
+      const style=[color && `color:${color}`,background && `background-color:${background}`,size && `font-size:${size}px`,lineHeight && `line-height:${lineHeight}`].filter(Boolean).join(";");
       if(style) attributes+=` style="${style}"`;
       const wrapped=`<${actualTag}${attributes}>${children}</${actualTag}>`;
       if(node.style?.fontWeight && (node.style.fontWeight==="bold" || Number(node.style.fontWeight)>=600)) return `<strong>${wrapped}</strong>`;

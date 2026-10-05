@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "savedAt": "2026-10-03T15:36:08.644Z",
+  "parameters": {
+    "downMs": 470,
+    "upMs": 420,
+    "maxAcceleration": 2,
+    "responseMs": 5,
+    "settleMs": 10,
+    "idleMs": 35,
+    "sensitivity": 1.6,
+    "gestureLimit": 1,
+    "gestureGapMs": 120,
+    "notchThreshold": 30,
+    "escapePadding": 14,
+    "tilt": 10
+  }
+}

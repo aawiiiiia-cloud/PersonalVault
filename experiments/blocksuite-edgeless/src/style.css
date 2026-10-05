@@ -1,0 +1,316 @@
+* { box-sizing: border-box; }
+:root {
+  --pv-connector-menu-bg:#fafbfd;
+  --pv-connector-menu-ink:#1d1f26;
+  --pv-connector-menu-border:#d9dce5;
+  --pv-connector-menu-hover:#e9edf4;
+  --pv-connector-menu-shadow:0 6px 20px rgba(29,31,38,.14);
+}
+:root[data-theme="dark"] {
+  --pv-connector-menu-bg:#252b37;
+  --pv-connector-menu-ink:#e4e8f1;
+  --pv-connector-menu-border:#4a5368;
+  --pv-connector-menu-hover:#354158;
+  --pv-connector-menu-shadow:0 6px 20px rgba(0,0,0,.35);
+}
+::selection { background: #1a1c22; color: #fff; }
+[data-theme="dark"] ::selection { background: #d7e2f8; color: #111723; }
+:root[data-theme="dark"] { color-scheme: dark; }
+[data-theme="dark"] body { color: #e4e8f1; background: #1b1c1f; }
+[data-theme="dark"] .edgeless-background {
+  background-color: #1b1c1f !important;
+  background-image: radial-gradient(circle, #36383d 1px, transparent 1.2px) !important;
+}
+[data-theme="dark"] .note-background { background: #252b37 !important; border-color: #4a5368 !important; }
+[data-theme="dark"] .inline-editor { color: #e4e8f1; caret-color: #e4e8f1; }
+[data-theme="dark"] .canvas-tools, [data-theme="dark"] .topbar { color: #e4e8f1; background: #252b37; border-color: #4a5368; }
+[data-theme="dark"] .canvas-tools button { color: #e4e8f1; background: #30384a; border-color: #4a5368; }
+[data-theme="dark"] .canvas-tools button img { filter: brightness(1.15); }
+[data-theme="dark"] .canvas-tools button.active { color: #eef3ff; background: #354769; border-color: #7799cf; }
+html, body { margin: 0; width: 100%; height: 100%; font-family: system-ui, sans-serif; }
+body { display: flex; flex-direction: column; background: #f5f6f8; }
+.topbar { min-height: 58px; padding: 10px 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; background: #fff; border-bottom: 1px solid #dde2eb; }
+.topbar > div:first-child { display: flex; flex-direction: column; gap: 2px; }
+.topbar strong { font-size: 15px; }
+.topbar small { color: #6b7280; font-size: 11px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+#media-file { display: none; }
+#status { color: #64748b; font-size: 12px; }
+button { color: #334155; background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 7px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+#canvas { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.note-drag-preview {
+  position: absolute;
+  z-index: 20;
+  display: none;
+  pointer-events: none;
+  border: 2px solid #4389ed;
+  border-radius: 8px;
+  background: #ddebff88;
+}
+edgeless-editor { display: block; width: 100%; height: 100%; }
+.embedded-canvas .topbar { display: none; }
+.embedded-canvas-view .canvas-tools { display: none; }
+.embedded-canvas-view affine-edgeless-zoom-toolbar-widget { display: none !important; }
+.embedded-canvas-view affine-format-bar-widget { display: none !important; }
+.embedded-canvas-view affine-edgeless-note,
+.embedded-canvas-view affine-edgeless-note .inline-editor { user-select: text !important; -webkit-user-select: text !important; }
+.embedded-canvas-view .affine-note-mask { pointer-events: none !important; }
+.embedded-canvas #canvas { min-height: 100%; }
+.embedded-canvas .edgeless-note-page-content {
+  /* Wheel scroll belongs to the enclosing card. Hidden retains programmatic
+     caret scrolling without trapping native wheel gestures inside a note. */
+  overflow: hidden !important;
+  overscroll-behavior: auto !important;
+}
+affine-edgeless-root { caret-color: transparent; }
+.inline-editor { caret-color: #172033; }
+
+/* The app exposes one small, predictable tool set instead of the preset dock. */
+edgeless-toolbar-widget,
+edgeless-element-toolbar-widget { display: none !important; }
+.canvas-tools {
+  position: fixed;
+  z-index: 30;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  max-width: calc(100vw - 28px);
+  padding: 7px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 6px 24px #243b5926;
+}
+.embedded-canvas .canvas-tools { width: max-content; max-width: calc(100vw - 16px); flex-wrap: nowrap; overflow-x: auto; bottom: 8px; }
+.embedded-canvas .canvas-tools button { flex: none; }
+.canvas-tools button { white-space: nowrap; display: inline-flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; min-width: 48px; height: 60px; padding: 0 6px 5px; font-size: 10px; }
+.canvas-tools button > img { width: 18px; height: 18px; flex: none; margin-bottom: 6px; }
+.canvas-tools [data-tool="select"] > img,
+.canvas-tools [data-tool="pan"] > img,
+.canvas-tools #create-table > img,
+.canvas-tools [data-tool="connector"] > img { transition: transform .2s ease; }
+.canvas-tools [data-tool="pan"]:hover > img { transform: translateY(-6px) rotate(-8deg); }
+.canvas-tools #create-table:hover > img { transform: translateY(-6px) rotate(8deg); }
+.canvas-tools [data-tool="select"]:hover > img { transform: translateY(-6px) rotate(-8deg); }
+.canvas-tools [data-tool="connector"]:hover > img { transform: translateY(-6px) rotate(8deg); }
+.canvas-tools [data-tool="note"] { width: 72px; }
+.canvas-tools .note-art-frame { position: relative; flex: none; width: 60px; height: 36px; }
+.canvas-tools .note-root { position: absolute; left: 50%; top: 50%; width: 100px; height: 64px; min-height: 0; transform: translate(-50%, -50%) scale(.55); transform-origin: center; }
+.canvas-tools .edgeless-toolbar-note-icon img { width: 24px; height: 24px; }
+.canvas-tools .preset-art { height: 36px; display: flex; align-items: flex-end; overflow: hidden; }
+.canvas-tools .preset-art img { height: 36px; width: auto; transform: translateY(5px); transition: transform .2s; }
+.canvas-tools button:hover .preset-art img, .canvas-tools button.active .preset-art img { transform: translateY(0); }
+.canvas-tools button.active {
+  color: #1748a6;
+  border-color: #7da7ee;
+  background: #e8f0ff;
+  font-weight: 650;
+}
+.canvas-tools button:disabled { opacity: .45; cursor: default; }
+.canvas-tools.panning::before {
+  content: '移动画布';
+  position: absolute;
+  bottom: calc(100% + 8px);
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #1e293b;
+  color: white;
+  font-size: 12px;
+}
+@media (max-width: 700px) {
+  .canvas-tools { bottom: 8px; gap: 2px; }
+  .canvas-tools button { min-width: 48px; padding-left: 4px; padding-right: 4px; }
+}
+
+/* Keep the grid attached to BlockSuite's own pan and zoom calculations. */
+.edgeless-background {
+  background-color: #f6f8fc !important;
+  background-image: radial-gradient(circle, #c0c9da 1px, transparent 1.2px) !important;
+}
+
+/* Notes and floating text need an edge even when they are not selected. */
+.edgeless-note-container {
+  outline: 1px solid #aebbd0;
+  outline-offset: 2px;
+  border-radius: 4px;
+  padding: 12px !important;
+  --affine-paragraph-margin: 0;
+}
+.edgeless-note-container .affine-paragraph-placeholder { display: none !important; }
+.edgeless-text-block-container {
+  outline: 1px dashed #9baec9;
+  outline-offset: 4px;
+  border-radius: 3px;
+}
+.edgeless-note-container:hover,
+.edgeless-text-block-container:hover {
+  outline-color: #8897aa;
+}
+
+affine-edgeless-note[data-pv-editing] .note-background { box-shadow: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-tools [data-tool="select"] > img,
+  .canvas-tools [data-tool="connector"] > img { transition: none; }
+}
+
+/* BlockSuite clips resized notes and shows an overflow preview on hover.
+   Keep the note's border stationary and let its content scroll in place. */
+.edgeless-note-container > .note-background {
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  transition: none !important;
+}
+.edgeless-note-page-content {
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+affine-edgeless-note:not([data-pv-table]) .edgeless-note-page-content {
+  overflow-x: hidden !important;
+}
+affine-edgeless-note[data-pv-table] .edgeless-note-page-content {
+  overflow-x: auto !important;
+}
+.edgeless-note-container > .edgeless-note-collapse-button,
+.edgeless-note-container > div:not(.note-background):not(.edgeless-note-page-content) {
+  display: none !important;
+}
+affine-edgeless-note:not([data-pv-table]):not([data-pv-editing]) .inline-editor {
+  caret-color: transparent;
+  pointer-events: none;
+}
+affine-edgeless-note:not([data-pv-editing]) { user-select: none; }
+affine-edgeless-note[data-pv-sealed],
+affine-edgeless-note[data-pv-sealed] * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+affine-edgeless-note[data-pv-drag-locked]::selection,
+affine-edgeless-note[data-pv-drag-locked] *::selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+/* 隐藏 BlockSuite 的块拖拽手柄（.affine-drag-handle-grabber，4x12 的灰色小竖条）。
+   它设计上用于拖动「整个块」，但在 edgeless 折叠文本框里无法重排段落——拖不动。
+   留着只会给出错误的可拖拽暗示，因此隐藏。仅隐藏手柄本身，容器保留。 */
+.affine-drag-handle-grabber {
+  display: none !important;
+}
+affine-edgeless-note[data-pv-editing] .edgeless-note-container {
+  outline: 2px solid #3987ed;
+  outline-offset: 0;
+}
+affine-edgeless-note[data-pv-editing] .edgeless-note-container,
+affine-edgeless-note[data-pv-table-editing] .edgeless-note-container {
+  outline: 3px solid #2879ed;
+  box-shadow: 0 10px 28px rgb(40 121 237 / 30%), 0 3px 10px rgb(25 55 110 / 20%);
+}
+
+affine-edgeless-image[data-pv-missing]::after {
+  content: '图片资源丢失，请重新插入';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  border: 1px dashed #d45b5b;
+  background: #fff5f5;
+  color: #9b2525;
+  text-align: center;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+/* File cards reflow inside their bounds instead of scaling text and icons. */
+affine-edgeless-attachment:has(.affine-attachment-card) > .affine-block-component {
+  width: 100%; height: 100%;
+}
+affine-edgeless-attachment .affine-attachment-container:has(.affine-attachment-card) {
+  width: calc(100% - 12px) !important; height: calc(100% - 12px) !important;
+  margin: 6px; transform: none !important;
+}
+affine-edgeless-attachment .affine-attachment-card {
+  width: 100% !important; height: 100% !important; box-sizing: border-box;
+  display: flex !important; flex-direction: row !important; align-items: center;
+  gap: 12px !important; padding: 12px !important; overflow: hidden;
+  background: var(--pv-connector-menu-bg) !important;
+  border-color: var(--pv-connector-menu-border) !important;
+  color: var(--pv-connector-menu-ink) !important;
+}
+affine-edgeless-attachment .affine-attachment-content {
+  min-width: 0; height: auto !important; flex: 1 1 0; gap: 4px !important;
+}
+affine-edgeless-attachment .affine-attachment-content-title { min-width: 0; }
+affine-edgeless-attachment .affine-attachment-content-title-icon { flex: 0 0 16px; }
+affine-edgeless-attachment .affine-attachment-content-title-text {
+  min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: inherit !important;
+}
+affine-edgeless-attachment .affine-attachment-content-info { color: inherit !important; opacity: .65; }
+affine-edgeless-attachment .affine-attachment-content-title-icon svg { fill: currentColor !important; }
+affine-edgeless-attachment .affine-attachment-banner { flex: 0 0 40px; }
+.pv-attachment-menu {
+  position: fixed; z-index: 2147483647; min-width: 180px; padding: 6px;
+  border-radius: 8px; border: 1px solid var(--affine-border-color);
+  background: var(--affine-background-overlay-panel-color); color: var(--affine-text-primary-color);
+  box-shadow: 0 8px 24px #0003; font: 13px sans-serif;
+}
+.pv-attachment-menu button {
+  display: block; width: 100%; padding: 8px 12px; text-align: left;
+  color: inherit; background: transparent; border: 0; border-radius: 5px; font: inherit; cursor: pointer;
+}
+.pv-attachment-menu button:hover:not(:disabled) { background: var(--affine-hover-color); }
+.pv-attachment-menu button:disabled { opacity: .45; cursor: default; }
+.pv-attachment-menu-hint { margin: 5px 12px; font-size: 11px; opacity: .65; }
+
+/* The preset stretches a 170×132 file card and clips its contents. A video
+   needs to occupy the actual canvas block bounds instead of that card. */
+affine-edgeless-attachment[data-pv-video] > .affine-block-component {
+  width: 100%;
+  height: 100%;
+}
+affine-edgeless-attachment[data-pv-video] .affine-attachment-container {
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+  overflow: visible !important;
+}
+affine-edgeless-attachment[data-pv-video] .affine-attachment-embed-container video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  background: transparent;
+}
+
+
+/* 文本框体检报告（临时排查工具） */
+#note-report {
+  margin: 0;
+  padding: 10px 20px;
+  max-height: 40vh;
+  overflow: auto;
+  background: #1d1f26;
+  color: #e6e8ee;
+  font: 12px/1.6 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  white-space: pre-wrap;
+}
+
+#record-fallback {
+  width: 100%;
+  min-height: 120px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 0;
+  background: #2a2d36;
+  color: #e6e8ee;
+  font: 11px/1.5 ui-monospace, Consolas, monospace;
+}

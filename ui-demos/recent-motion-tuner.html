@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>最近访问 · 滚动手感调节</title>
+<link rel="stylesheet" href="../assets/fonts/fonts.css"><link rel="stylesheet" href="recent-motion-tuner.css"><script type="module" src="recent-motion-tuner.js"></script></head>
+<body><header><div><span class="eyebrow">最近访问</span><h1>滚动手感调节</h1><p>在左侧卡片上滚动，右侧参数实时生效。</p></div><button id="save" class="primary" disabled>保存调节结果</button></header>
+<main><section class="preview"><div class="preview-tools"><strong>卡片预览</strong><div><button id="singleUp">向上单张</button><button id="singleDown">向下单张</button><button id="burst">快速滚动</button></div></div>
+<iframe id="preview" src="../index.html?recent-motion-preview=1" title="最近访问卡片滚动预览"></iframe>
+<div class="readout"><span id="motionStatus">正在加载预览…</span><span id="motionValue">当前参数尚未应用到正式界面</span></div>
+<div class="actions"><button id="resetPreview">回到第一张</button><button id="resetParameters">恢复当前正式参数</button><span id="savedStatus" role="status">参数修改会自动保留在本页。</span></div>
+</section><aside><div id="controls"></div><details><summary>查看参数</summary><textarea id="json" readonly aria-label="当前调节参数"></textarea></details></aside></main>
+</body></html>

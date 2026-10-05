@@ -13,7 +13,7 @@ const MODEL_PROFILES = Object.freeze({
     queryPrefix:"query: ",
     documentPrefix:"passage: ",
     minimumScore:0.70,
-    maxDrop:0.01,
+    maxDrop:0.03,
     indexFile:"semantic-multilingual-e5-base-q8.sqlite",
     approximateDownloadMB:295,
     legacy:false

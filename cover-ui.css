@@ -1,0 +1,158 @@
+.cover-stack { position:relative; width:100%; padding:12px 10px 4px; box-sizing:border-box; isolation:isolate; }
+.cover-layer { position:absolute; inset:12px 10px 4px; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--panel); box-shadow:0 5px 12px #0002; transform:translateY(calc(var(--cover-depth,0) * -7px)) scale(calc(1 - var(--cover-depth,0) * .045)); transform-origin:center top; transition:transform .22s ease; }
+.cover-stack-multiple:hover .cover-layer { transform:translateY(calc(var(--cover-depth,0) * -11px)) scale(calc(1 - var(--cover-depth,0) * .045)); }
+.cover-layer img,.cover-layer video { display:block; width:100%; height:100%; object-fit:cover; }
+.cover-layer-front { position:relative; inset:auto; }
+.cover-layer-front img,.cover-layer-front video { height:auto; }
+.cover-layer-front .cover-placeholder { min-height:100px; }
+.cover-placeholder { display:grid; place-items:center; width:100%; height:100%; color:var(--muted); font-size:13px; }
+.cover-video-badge,.cover-count { position:absolute; bottom:8px; right:8px; border-radius:5px; padding:3px 6px; color:#fff; background:#151820b8; font:10px/1.3 var(--font-ui); }
+.cover-count { z-index:5; bottom:12px; left:18px; right:auto; }
+.cover-picker { display:grid; grid-template-columns:minmax(0,auto) minmax(170px,1fr); grid-template-rows:136px; gap:14px; align-items:center; padding:14px; margin-top:12px; border:1px solid var(--line); border-radius:10px; background:var(--panel); container-type:inline-size; }
+.cover-picker-preview { min-width:0; max-width:280px; grid-column:1; grid-row:1; }
+.cover-picker-preview .cover-stack { width:fit-content; max-width:100%; }
+.cover-picker-preview .cover-layer-front { width:fit-content; max-width:100%; height:120px; }
+.cover-picker-preview .cover-layer img,.cover-picker-preview .cover-layer video { width:auto; max-width:100%; height:120px; object-fit:contain; }
+.cover-picker-preview .cover-placeholder { width:100px; min-height:120px; }
+.cover-picker-body { min-width:0; align-self:center; grid-column:2; grid-row:1; }
+.cover-picker-open .cover-picker-body { align-self:start; display:flex; align-items:center; flex-wrap:wrap; gap:4px 12px; }
+.cover-picker-open .cover-picker-heading { margin:0; }
+.cover-picker-heading { display:flex; gap:12px; align-items:center; margin-bottom:10px; font-size:12px; }
+.cover-picker-heading>span { color:var(--muted); font-size:11px; }
+.cover-picker-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.cover-picker button { padding:7px 10px; border:1px solid var(--line-strong); border-radius:7px; color:var(--ink); background:var(--card); font:11px var(--font-ui); }
+.cover-picker button:hover { border-color:var(--accent); }
+.cover-choice-strip { grid-column:2; grid-row:1; align-self:end; display:flex; align-items:center; gap:6px; min-width:0; }
+.cover-options { display:flex; flex:1; min-width:0; gap:8px; height:100px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; touch-action:pan-y; user-select:none; }
+.cover-options::-webkit-scrollbar { display:none; }
+.cover-picker button.cover-scroll-arrow { display:grid; place-items:center; flex:none; width:24px; height:36px; padding:0; border-radius:8px; }
+.cover-scroll-arrow svg { width:16px; height:16px; fill:currentColor; stroke:currentColor; stroke-width:2; stroke-linejoin:round; }
+.cover-scroll-back svg { transform:rotate(180deg); }
+.cover-scroll-arrow:disabled { opacity:.3; cursor:default; }
+@container(max-width:480px) {
+  .cover-picker-open .cover-picker-heading>span,.cover-picker-open .cover-picker-actions>button:nth-child(2) { display:none; }
+}
+.cover-options button[aria-pressed="true"] { border-color:var(--accent); background:var(--accent-soft); }
+.cover-option,.cover-option-auto { display:flex; flex-direction:column; flex:0 0 100px; min-width:0; height:100px; gap:6px; }
+.cover-option-auto { align-items:center; justify-content:center; }
+.cover-option-image { position:relative; width:100%; height:64px; flex:none; overflow:hidden; }
+.cover-option-image img { width:100%; height:100%; object-fit:contain; }
+.cover-option>span:last-child { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; width:100%; }
+.cover-empty { color:var(--muted); font-size:11px; }
+.entry-cover { display:block; width:100%; margin-bottom:12px; }
+.entry-cover[hidden],.asset-card-visual[data-card-cover][hidden] { display:none; }
+.content-gallery .entry-card:is([data-card-type="project"],[data-card-type="knowledge"]) p { -webkit-line-clamp:3; }
+.asset-card-visual[data-card-cover] { display:block; aspect-ratio:auto; overflow:visible; background:transparent; }
+.asset-card-visual[data-card-cover] .cover-layer-front img { height:auto; object-fit:contain; }
+.asset-card:hover .asset-card-visual[data-card-cover] img { transform:none; }
+@media(prefers-reduced-motion:reduce){.cover-layer{transition:none}}
+
+/* Separate the translucent surface from its directional rim reflection.
+   Material layering reference: https://github.com/rdev/liquid-glass-react */
+:root {
+  --collection-radius:14px;
+  --gallery-radius:17.5px;
+  --tag-radius:9px;
+  --collection-glass-fill:rgba(255,255,255,.21);
+  --collection-glass-outline:rgba(89,101,120,.38);
+  --collection-glass-highlight:rgba(255,255,255,.415);
+  --collection-glass-mid-edge:rgba(89,101,120,.19);
+  --collection-glass-shaded-edge:rgba(69,78,93,.26);
+  --collection-glass-angle:175.5deg;
+  --collection-glass-blur:11.5px;
+  --collection-glass-saturation:77%;
+  --collection-glass-shadow:0 6px 11px rgba(0,0,0,.1);
+}
+:root[data-theme="dark"] {
+  --collection-glass-fill:rgba(125,125,125,.135);
+  --collection-glass-outline:rgba(184,195,214,0);
+  --collection-glass-highlight:rgba(255,255,255,.324);
+  --collection-glass-mid-edge:rgba(184,195,214,0);
+  --collection-glass-shaded-edge:rgba(191,205,229,.17);
+  --collection-glass-angle:155deg;
+  --collection-glass-blur:10px;
+  --collection-glass-saturation:90%;
+  --collection-glass-shadow:0 6px 8px rgba(0,0,0,.58);
+}
+#collectionList .react-content-card {
+  position:relative;
+  border:1px solid var(--collection-glass-outline);
+  border-radius:var(--collection-radius);
+  background:var(--collection-glass-fill);
+  box-shadow:var(--collection-glass-shadow);
+  backdrop-filter:blur(var(--collection-glass-blur)) saturate(var(--collection-glass-saturation));
+  -webkit-backdrop-filter:blur(var(--collection-glass-blur)) saturate(var(--collection-glass-saturation));
+  transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+#collectionList.content-gallery .react-content-card {--collection-radius:var(--gallery-radius);}
+#collectionList .react-content-card::before {
+  content:"";
+  position:absolute;inset:-1px;
+  border-radius:inherit;padding:1px;
+  pointer-events:none;
+  background:linear-gradient(var(--collection-glass-angle),var(--collection-glass-highlight) 0%,var(--collection-glass-highlight) 12%,var(--collection-glass-mid-edge) 38%,var(--collection-glass-mid-edge) 58%,var(--collection-glass-shaded-edge) 100%);
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+}
+#collectionList .react-content-card:hover {
+  border-color:var(--collection-glass-outline);
+  box-shadow:var(--collection-glass-shadow);
+  transform:none;
+}
+:root[data-theme="dark"] #collectionList .react-content-card:hover {
+  border-color:var(--collection-glass-outline);
+  box-shadow:var(--collection-glass-shadow);
+}
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference) {
+  #collectionList .react-content-card:hover {transform:translateY(-2px);}
+  #collectionList .react-content-card:active {transform:translateY(-.5px);}
+}
+#collectionList .react-content-card.selected {
+  border-color:var(--accent);
+  background:var(--accent-soft);
+  box-shadow:inset 0 0 0 1px var(--accent),var(--collection-glass-shadow);
+}
+#collectionList .react-content-card .entry-open:focus-visible {
+  outline:2px solid var(--accent);outline-offset:-3px;border-radius:inherit;
+}
+#collectionList .react-content-card :is(.type-chip,.status-pill,.relation-overflow) {
+  border-radius:var(--tag-radius);
+}
+:root :is(.entry-card,.asset-card) {border-radius:var(--collection-radius);}
+/* Fixed radii chosen in the material tuner, shared by card labels and status tags. */
+:root :is(.type-chip,.ref-chip,.status-pill,.relation-overflow),
+:root .main-area-chips button,
+:root .main-relation-chips button,
+:root .main-card-info .main-status-value,
+:root .main-card-info .status-tag-trigger,
+:root .asset-meta span {
+  border-radius:var(--tag-radius);
+}
+:root .ref-chip button {border-radius:inherit;}
+#collectionList .card-status-trigger {position:absolute;top:18px;right:18px;cursor:pointer;z-index:1;}
+#collectionList.content-gallery .card-status-trigger {top:18px;right:18px;}
+#collectionList.compact-list .card-status-trigger {top:8px;right:8px;}
+#collectionList .card-status-trigger:hover {filter:brightness(.96);}
+#collectionList .card-status-trigger:focus-visible {outline:2px solid var(--accent);outline-offset:2px;}
+.collection-status-menu {width:120px;z-index:100;}
+.collection-status-menu .main-status-value {justify-content:center;}
+.card-status-error {font-size:11px;color:var(--danger);}
+.entry-dates {display:flex;flex-direction:column;gap:2px;font:400 10px/1.4 var(--font-mono);white-space:nowrap;}
+#collectionList.compact-list .react-content-card {min-height:84px;}
+#collectionList.compact-list .react-content-card .entry-open,
+#collectionList.compact-list .react-content-card .card-relations {padding-right:130px;}
+#collectionList.compact-list .react-content-card .entry-meta {position:absolute;top:auto;bottom:8px;right:8px;text-align:right;display:flex;flex-direction:column;align-items:flex-end;}
+#collectionList.compact-list .entry-list-status {position:absolute;top:8px;right:8px;}
+@media(max-width:700px) {
+  #collectionList.compact-list .card-status-trigger {top:10px;right:8px;}
+  #collectionList.compact-list .react-content-card .entry-open h3 {padding-right:65px;}
+}
+@supports not (backdrop-filter:blur(1px)) {
+  #collectionList .react-content-card {background:var(--panel);}
+}
+@media(prefers-reduced-motion:reduce) {
+  #collectionList .react-content-card {transition:none;}
+  #collectionList .react-content-card:hover {transform:none;}
+}

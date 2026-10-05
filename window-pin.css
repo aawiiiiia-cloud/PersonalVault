@@ -1,0 +1,14 @@
+button.window-pin-button {
+  display:inline-flex;align-items:center;justify-content:center;gap:4px;
+  flex:0 0 auto;height:28px;min-width:54px;padding:0 7px;
+  border:1px solid var(--line,#d9dce5);border-radius:7px;
+  background:transparent;color:var(--muted,#78808f);font-size:11px;line-height:1;
+  cursor:pointer;-webkit-app-region:no-drag;
+}
+button.window-pin-button svg {display:block;flex:0 0 14px;width:14px;height:14px;margin:0;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+button.window-pin-button > span {display:block;margin:0;padding:0;color:inherit;font:inherit;line-height:14px;letter-spacing:normal;text-transform:none;white-space:nowrap;}
+button.window-pin-button:hover {color:var(--ink,#1d1f26);background:var(--soft,rgba(128,128,128,.12));}
+button.window-pin-button[aria-pressed="true"] {color:var(--ink,#1d1f26);background:var(--soft,rgba(128,128,128,.18));border-color:currentColor;}
+[data-theme="dark"] button.window-pin-button {color:var(--muted,#b5c0d5);border-color:var(--line,#414652);}
+[data-theme="dark"] button.window-pin-button[aria-pressed="true"] {color:var(--ink,#e4e8f0);border-color:currentColor;}
+.appearance-head .window-pin-button {margin-left:auto;margin-right:8px;}

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>媒体预览 · 个人知识工作台</title>
+  <script src="../theme.js"></script>
+  <script>if (navigator.userAgent.includes('Electron')) document.documentElement.classList.add('electron');</script>
+  <link rel="stylesheet" href="./media-viewer.css" />
+  <link rel="stylesheet" href="./video-controls.css" />
+  <link rel="stylesheet" href="../dark.css" />
+  <script src="./src/file-viewer-entry.js" type="module"></script>
+  <link rel="stylesheet" href="./src/file-viewer.css" />
+  <link rel="stylesheet" href="../window-pin.css">
+  <script src="../window-pin.js" defer></script>
+</head>
+<body>
+  <header class="viewer-header">
+    <div class="viewer-heading">
+      <select id="preview-type" aria-label="切换附件类型" hidden></select>
+      <strong id="preview-heading">媒体预览</strong>
+      <span id="media-name"></span>
+      <select id="attachment-select" aria-label="切换附件" hidden></select>
+    </div>
+    <div class="viewer-navigation" aria-label="媒体翻页">
+      <button id="previous" type="button" aria-label="上一个附件" title="上一个附件 · ←" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+      <span id="page-count" aria-live="polite">— / —</span>
+      <button id="next" type="button" aria-label="下一个附件" title="下一个附件 · →" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+      <button id="close" type="button" aria-label="关闭窗口" title="关闭"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    </div>
+  </header>
+  <main id="stage" aria-label="媒体查看区域">
+    <span id="loading">正在加载媒体…</span>
+  </main>
+  <footer class="viewer-footer">
+    <span id="viewer-hint" hidden></span>
+    <div class="viewer-file-actions" hidden><button id="open-external" type="button">系统应用打开</button><button id="reveal-file" type="button">定位文件</button></div>
+    <div class="zoom-controls" aria-label="缩放控制">
+      <button id="zoom-out" type="button" aria-label="缩小">−</button>
+      <output id="zoom-value">100%</output>
+      <button id="zoom-in" type="button" aria-label="放大">+</button>
+      <button id="fit" type="button">适应窗口</button>
+    </div>
+  </footer>
+</body>
+</html>

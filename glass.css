@@ -1,0 +1,138 @@
+/* Static glass material: translucent tint, fixed bevel and a clear content layer.
+   Native CSS keeps the existing controls and card structure intact. */
+:root {
+  --sidebar-selected-bg: #1a1c22;
+  --sidebar-selected-ink: #fff;
+  --glass-fill: rgba(255, 255, 255, .24);
+  --glass-edge: rgba(255, 255, 255, .94);
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, .98),
+    inset 0 -1px 0 rgba(148, 171, 206, .10),
+    0 2px 5px rgba(42, 65, 101, .035), 0 10px 26px rgba(42, 65, 101, .055);
+}
+
+body {
+  background:
+    radial-gradient(ellipse 620px 400px at 96% 20%, rgba(178, 193, 216, .28), transparent 76%),
+    radial-gradient(ellipse 540px 380px at 8% 44%, rgba(180, 205, 212, .22), transparent 76%),
+    radial-gradient(ellipse 520px 380px at 66% 80%, rgba(195, 199, 216, .16), transparent 76%),
+    var(--paper);
+  background-attachment: fixed;
+}
+:root:not([data-theme="dark"]) { --paper: #ffffff; }
+:root:not([data-theme="dark"]) body {
+  background:
+    radial-gradient(ellipse 720px 480px at 96% 20%, rgba(157, 221, 210, 0), transparent 76%),
+    radial-gradient(ellipse 620px 440px at 8% 44%, rgba(174, 210, 235, .08), transparent 76%),
+    var(--paper);
+  background-attachment: fixed;
+}
+main, .sidebar, body.desktop-shell .desktop-titlebar { background: transparent; }
+.sidebar { border-right-color: transparent; }
+
+:root .sidebar .nav-item.active,
+:root .sidebar .nav-item-system.active,
+:root .sidebar .area-nav-list button.active {
+  color: var(--sidebar-selected-ink);
+  background: var(--sidebar-selected-bg);
+  box-shadow: none;
+  font-weight: 600;
+}
+:root .sidebar .nav-item.active > span,
+:root .sidebar .nav-item.active em,
+:root .sidebar .nav-item-system.active > span { color: inherit; }
+:root .sidebar .nav-item.active .nav-active-dot,
+:root .sidebar .area-nav-list button.active::before { background: var(--sidebar-selected-ink); }
+
+:root:not([data-theme="dark"]) .sidebar .nav-item:not(.active):hover,
+:root:not([data-theme="dark"]) .sidebar .area-nav-list button:not(.active):hover,
+:root:not([data-theme="dark"]) .sidebar-footer button:not(.active):hover {
+  background: #d7deeb;
+  color: #34435e;
+}
+:root:not([data-theme="dark"]) .sidebar .nav-item:not(.active):hover > .nav-icon {
+  color: inherit;
+}
+
+.collection-list.glass-list { gap: 6px; }
+.glass-list .entry-card,
+.content-gallery .entry-card,
+.asset-gallery .asset-card {
+  border: 1px solid rgba(191, 204, 225, .46);
+  border-top-color: var(--glass-edge);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .34), rgba(255, 255, 255, .04) 48%, rgba(226, 239, 255, .10)), var(--glass-fill);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(6px) saturate(135%);
+  backdrop-filter: blur(6px) saturate(135%);
+  transition: transform .18s cubic-bezier(.2, .7, .3, 1), background-color .12s ease, border-color .12s ease;
+}
+.glass-list .entry-card:first-child { border-top-color: var(--glass-edge); }
+.glass-list .entry-card:hover,
+.content-gallery .entry-card:hover,
+.asset-gallery .asset-card:hover {
+  border-color: rgba(158, 180, 217, .6);
+  border-top-color: rgba(255, 255, 255, .98);
+  background-color: rgba(255, 255, 255, .34);
+}
+@media (hover: hover) and (pointer: fine) {
+  .glass-list .entry-card:hover, .content-gallery .entry-card:hover,
+  .asset-gallery .asset-card:hover { transform: translateY(-2px); }
+  .glass-list .entry-card:active, .content-gallery .entry-card:active,
+  .asset-gallery .asset-card:active { transform: translateY(-.5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glass-list .entry-card, .content-gallery .entry-card,
+  .asset-gallery .asset-card { transition: none; transform: none !important; }
+}
+.glass-list .entry-card.selected,
+.content-gallery .entry-card.selected,
+.asset-gallery .asset-card.selected {
+  border-color: rgba(74, 108, 247, .48);
+  background-color: rgba(201, 220, 255, .48);
+}
+
+.content-gallery .entry-card,
+.asset-gallery .asset-card {
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  backdrop-filter: blur(10px) saturate(120%);
+}
+.asset-gallery .asset-card { padding: 7px; }
+.asset-gallery .asset-card-visual { border-radius: 8px; }
+.asset-gallery .asset-card-copy { padding: 10px 6px 5px; }
+.asset-gallery .source-selectable.selected .asset-card-visual { box-shadow: inset 0 0 0 2px var(--accent); }
+.compact-list .relation-kind { color: #7b8597; }
+.compact-list .entry-meta { color: #8792a5; }
+
+#viewerDialog,
+#editorDialog {
+  border: 1px solid rgba(255, 255, 255, .9);
+  background: linear-gradient(rgba(255, 255, 255, .2), rgba(255, 255, 255, .2)),
+    linear-gradient(135deg, rgba(255, 255, 255, .28), rgba(229, 239, 255, .08)), rgba(250, 252, 255, .70);
+  box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 rgba(167, 187, 218, .2),
+    0 26px 80px rgba(27, 43, 73, .24), 0 3px 12px rgba(27, 43, 73, .09);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  backdrop-filter: blur(18px) saturate(120%);
+}
+#viewerDialog::backdrop,
+#editorDialog::backdrop {
+  background: rgba(28, 40, 62, .32);
+  backdrop-filter: none;
+}
+#viewerDialog .dialog-head,
+#editorDialog .dialog-head { background: transparent; }
+:root:not([data-theme="dark"]) #viewerDialog,
+:root:not([data-theme="dark"]) #editorDialog { background: var(--panel); }
+
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-list .entry-card, .content-gallery .entry-card, .asset-gallery .asset-card,
+  #viewerDialog, #editorDialog { background: #f9fbff; }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .glass-list .entry-card, .content-gallery .entry-card, .asset-gallery .asset-card,
+  #viewerDialog, #editorDialog {
+    background: #fff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border-color: var(--line-strong);
+  }
+}

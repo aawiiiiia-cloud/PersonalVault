@@ -27,7 +27,21 @@
     };
   }
 
-  const api = { CONTENT_TYPES, ACTIVE_REF_FIELDS, selectable, groups };
+  function detach(entries,currentId,removedIds,updatedAt) {
+    const removed=new Set(removedIds);
+    if(!removed.size)return entries;
+    return entries.map(entry=>{
+      if(entry.id!==currentId&&!removed.has(entry.id))return entry;
+      const patch={};
+      for(const field of ACTIVE_REF_FIELDS){
+        if(!Array.isArray(entry[field]))continue;
+        const ids=entry[field].filter(id=>entry.id===currentId?!removed.has(id):id!==currentId);
+        if(ids.length!==entry[field].length)patch[field]=ids;
+      }
+      return Object.keys(patch).length?{...entry,...patch,updatedAt,updated:String(updatedAt).slice(0,10)}:entry;
+    });
+  }
+  const api = { CONTENT_TYPES, ACTIVE_REF_FIELDS, selectable, groups, detach };
   global.WorkbenchRelations = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

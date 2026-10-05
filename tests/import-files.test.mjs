@@ -47,9 +47,13 @@ try {
   const registered = (await vault.importFiles([external], "register")).assets[0];
 
   assert.equal(copiedFirst.displayName, "同名资料.txt");
-  assert.equal(copiedSecond.displayName, "同名资料 (2).txt");
-  assert.equal(duplicate.id, copiedFirst.id);
-  assert.equal(duplicate.duplicate, true);
+  assert.equal(copiedSecond.displayName, "同名资料.txt");
+  assert.notEqual(duplicate.id, copiedFirst.id);
+  assert.notEqual(duplicate.relativePath,copiedFirst.relativePath);
+  assert.notEqual(duplicate.ownerCardId,copiedFirst.ownerCardId);
+  assert.equal(duplicate.duplicate, undefined);
+  assert.equal(duplicate.contentHash,copiedFirst.contentHash);
+  assert.equal(copiedFirst.relativePath,`文件/资料/同名资料--${copiedFirst.ownerCardId}/同名资料.txt`);
   assert.equal(await fs.access(movable).then(() => true, () => false), false);
   assert.equal(moved.storageMode, "move");
   assert.equal(registered.storageMode, "register");

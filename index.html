@@ -4,102 +4,100 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>个人知识工作台</title>
+  <script src="theme.js"></script>
+  <script>if(new URLSearchParams(location.search).has('card'))document.documentElement.classList.add('standalone-card-page');</script>
   <link rel="stylesheet" href="assets/fonts/fonts.css">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="glass.css" id="glassStyles">
+  <link rel="stylesheet" href="dark.css">
+  <link rel="stylesheet" href="appearance.css">
+  <link rel="stylesheet" href="workspace-frame.css">
+  <script src="appearance.js" defer></script>
+  <link rel="stylesheet" href="window-pin.css">
+  <script src="window-pin.js" defer></script>
 </head>
 <body>
   <div class="desktop-titlebar" aria-hidden="true">
     <span>个人知识工作台</span>
   </div>
   <div class="app-shell">
-    <aside class="sidebar">
+    <aside class="sidebar" id="workspaceSidebar">
       <div class="brand">
         <div class="brand-mark">知</div>
         <div><strong>知行台</strong><span>方法论驱动的知识工作台</span></div>
       </div>
 
-      <button class="capture-button" id="quickCapture">＋ 新建随手记</button>
-      <button class="asset-import-button" id="openAssetImport">＋ 导入文件</button>
+      <button class="capture-button" id="quickCapture"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>随手记</button>
+      <button class="asset-import-button" id="openAssetImport"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M4 16v5h16v-5"/></svg></span>导入文件</button>
 
       <nav id="mainNav" aria-label="主导航">
-        <button class="nav-item active" data-view="home"><span>⌂</span>工作台</button>
-        <button class="nav-item" data-view="inbox"><span>⌁</span>随手记 <em id="inboxCount">0</em></button>
-
-        <button class="nav-item" data-view="areas"><span>◎</span>领域</button>
+        <p class="nav-subsection-label">你的空间</p>
+        <button class="nav-item active" data-view="home"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7"/></svg></span>工作台<i class="nav-active-dot" aria-hidden="true"></i></button>
+        <button class="nav-item" data-view="inbox"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 14h5l1 3h4l1-3h5"/></svg></span>随手记<em id="inboxCount">0</em></button>
+        <div class="area-nav-row">
+          <button class="nav-item" data-view="areas"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg></span>领域</button>
+          <button id="areaNavToggle" class="area-nav-toggle" type="button" aria-controls="areaNavList" aria-expanded="true" aria-label="收起领域列表" title="收起领域列表"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
+        </div>
         <div id="areaNavList" class="area-nav-list"></div>
-
-        <p class="nav-subsection-label">查看</p>
-        <button class="nav-item" data-view="graph"><span>⌘</span>关系图谱</button>
-
-        <p class="nav-subsection-label">全部内容</p>
-        <button class="nav-item sub" data-view="projects"><span>◇</span>项目</button>
-        <button class="nav-item sub" data-view="knowledge"><span>✦</span>知识</button>
-        <button class="nav-item sub" data-view="sources"><span>▤</span>资料</button>
+        <button class="nav-item" data-view="graph"><span class="nav-icon nav-icon-graph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M5.1 6.7 6.6 17.2M8.5 17.5l3.7-5.1M15.4 10.5h3.4M4.8 2.5a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2M7 17.1a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8M13.4 8.1a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8M20.7 8.6a1.9 1.9 0 1 0 0 3.8 1.9 1.9 0 0 0 0-3.8"/></svg></span>关系图谱</button>
+        <p class="nav-subsection-label">内容库</p>
+        <button class="nav-item" data-view="projects"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h7l2 3h9v11H3z"/></svg></span>项目<em id="projectNavCount">0</em></button>
+        <button class="nav-item" data-view="knowledge"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/></svg></span>知识<em id="knowledgeNavCount">0</em></button>
+        <button class="nav-item" data-view="sources"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5zM9 10h6M9 14h6M9 18h4"/></svg></span>资料<em id="sourceNavCount">0</em></button>
       </nav>
 
       <div class="sidebar-footer">
-        <button class="nav-item nav-item-system" data-view="trash"><span>♲</span>回收站 <em id="trashCount">0</em></button>
-        <button id="openDataManager">数据管理</button>
+        <div class="appearance-actions">
+          <button id="themeToggle" type="button" aria-label="外观设置"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 3-.6 2.2-1.8 1-2.2-.6L2.4 9l1.7 1.6v2.8L2.4 15l2 3.4 2.2-.6 1.8 1L9 21h6l.6-2.2 1.8-1 2.2.6 2-3.4-1.7-1.6v-2.8L21.6 9l-2-3.4-2.2.6-1.8-1L15 3Z"/><circle cx="12" cy="12" r="3"/></svg></span><span data-theme-label>外观设置</span></button>
+          <button id="themeQuickToggle" type="button" aria-label="切换到深色模式" title="切换到深色模式"><span class="nav-icon theme-mode-icon" data-switch-to="dark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.2A8.5 8.5 0 0 1 9.8 4a8.5 8.5 0 1 0 10.2 10.2Z"/></svg></span><span class="nav-icon theme-mode-icon" data-switch-to="light" aria-hidden="true" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6 19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></span></button>
+        </div>
+        <button class="nav-item nav-item-system" data-view="trash"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/></svg></span>回收站 <em id="trashCount">0</em></button>
+        <button id="openDataManager"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg></span>数据管理</button>
         <button id="resetDemo">重置演示数据</button>
       </div>
     </aside>
+    <div id="sidebarResizeHandle" class="sidebar-resize-handle" role="separator" aria-label="调整侧边栏宽度" aria-orientation="vertical" aria-controls="workspaceSidebar" tabindex="0"></div>
 
     <main>
       <header class="topbar">
-        <div>
-          <p class="eyebrow" id="viewEyebrow">2026 · 个人知识系统</p>
-          <h1 id="viewTitle">今天，把经历变成方法</h1>
+        <div class="workspace-title" hidden>
+          <p class="eyebrow" id="viewEyebrow">工作概览</p>
+          <h1 id="viewTitle">工作台</h1>
         </div>
         <div class="search-wrap">
           <input id="searchInput" type="search" placeholder="搜索项目、知识与资料…">
           <button id="clearSearch" class="clear-search hidden" type="button" aria-label="退出搜索">×</button>
-          <kbd>Ctrl K</kbd>
         </div>
       </header>
 
       <section id="homeView" class="view active">
-        <div class="hero">
-          <div>
-            <span class="date-pill" id="todayLabel"></span>
-            <h2>知识不是收藏，<br><i>是下一次行动的起点。</i></h2>
-            <p>从真实问题出发，保留来源，完成复盘，只提炼真正能复用的结论。</p>
-          </div>
-          <div class="method-loop" aria-label="知识循环">
-            <div><b>01</b><span>捕获</span></div><i>→</i>
-            <div><b>02</b><span>实践</span></div><i>→</i>
-            <div><b>03</b><span>复盘</span></div><i>→</i>
-            <div><b>04</b><span>提炼</span></div>
-          </div>
+        <div class="home-quick-actions" aria-label="快捷操作">
+          <button class="primary" data-create="capture">＋ 随手记</button>
+          <button class="secondary" data-create="project">＋ 项目</button>
+          <button class="secondary" data-create="knowledge">＋ 知识</button>
+          <button class="secondary" data-create="source">＋ 资料</button>
+          <button class="secondary" data-home-import>导入文件</button>
         </div>
-
-        <div class="section-heading">
-          <div><span>开始行动</span><h3>你现在想做什么？</h3></div>
+        <div class="home-card-columns">
+        <section class="home-section home-recent-section">
+          <div class="home-section-head"><h2>最近访问</h2></div>
+          <div id="homeRecent" class="home-recent-stack" aria-label="最近访问卡片，使用滚轮或方向键切换"></div>
+        </section>
+        <section class="home-section home-project-section">
+          <div class="home-section-head"><h2>进行中的项目 <span id="homeProjectCount"></span></h2><button data-view-link="projects">查看全部 →</button></div>
+          <div id="homeProjects" class="home-recent-stack" aria-label="进行中的项目卡片，使用滚轮或方向键切换"></div>
+        </section>
+        <section class="home-section home-pending-section">
+          <div class="home-section-head"><h2>待整理 <span id="homePendingCount"></span></h2></div>
+          <div id="homePending" class="home-recent-stack" aria-label="待整理卡片，从全部待整理内容中随机切换"></div>
+        </section>
         </div>
-        <div class="action-grid">
-          <button class="action-card terracotta" data-create="capture"><span>01</span><div><b>新建随手记</b><small>先收下来，稍后分类</small></div><i>↗</i></button>
-          <button class="action-card blue" data-create="project"><span>02</span><div><b>开始一个项目</b><small>从目标和成功标准开始</small></div><i>↗</i></button>
-          <button class="action-card ochre" data-open-project-review><span>03</span><div><b>完成一次项目复盘</b><small>先选择对应项目，再沉淀经验</small></div><i>↗</i></button>
-          <button class="action-card green" data-create="knowledge"><span>04</span><div><b>提炼一条知识</b><small>形成可复用的判断</small></div><i>↗</i></button>
-        </div>
-
-        <div class="dashboard-grid">
-          <section class="panel">
-            <div class="panel-head"><div><span>尚未决定正式类型</span><h3>随手记</h3></div><button data-view-link="inbox">查看全部 →</button></div>
-            <div id="inboxPreview" class="stack-list"></div>
-          </section>
-          <section class="panel">
-            <div class="panel-head"><div><span>正在发生</span><h3>进行中的项目</h3></div><button data-view-link="projects">项目列表 →</button></div>
-            <div id="projectPreview" class="stack-list"></div>
-          </section>
-        </div>
-
-        <section class="principle-strip">
-          <span>本周原则</span>
-          <blockquote>“先给问题起一个通用名字，再决定复用什么、自己做什么。”</blockquote>
-          <small>来自：工具项目复盘</small>
+        <section class="home-section home-activity-section">
+          <div class="home-section-head"><h2>活跃日历</h2><span id="homeActivitySummary"></span></div>
+          <div class="home-activity-scroll"><div id="homeActivityCalendar" class="home-activity-calendar"></div></div>
+          <div class="home-activity-footer"><div aria-label="颜色越深代表次数越多"><span>少</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>多</span></div></div>
         </section>
       </section>
-
       <section id="collectionView" class="view">
         <div class="collection-toolbar">
           <div class="collection-filters">
@@ -110,7 +108,7 @@
             </label>
           </div>
           <div class="collection-actions">
-            <div id="sourceDisplayToggle" class="display-toggle hidden" aria-label="资料呈现方式">
+            <div id="sourceDisplayToggle" class="display-toggle hidden" role="group" aria-label="内容呈现方式">
               <button type="button" data-source-display="gallery">画廊</button>
               <button type="button" data-source-display="list">列表</button>
             </div>
@@ -125,28 +123,25 @@
             </div>
           </div>
         </div>
-        <section id="sourceBatchBar" class="source-batch-bar hidden" aria-label="资料批量整理">
+        <section id="sourceBatchBar" class="source-batch-bar hidden" aria-label="批量整理">
           <div class="source-batch-selection">
-            <div class="source-batch-section-heading"><div><span>选择</span><b>已选择 <strong id="sourceBatchCount">0</strong> 份资料</b></div><p>批量操作只会影响当前仍然可见的选择。</p></div>
+            <div class="source-batch-section-heading"><div><b>已选择 <strong id="sourceBatchCount">0</strong> <span id="sourceBatchTypeLabel">条资料</span></b></div></div>
             <div class="source-batch-selection-actions"><button type="button" id="sourceBatchSelectVisible">全选当前显示的 0 份资料</button><button type="button" id="sourceBatchClear">清除选择</button><button type="button" id="sourceBatchExit">结束批量整理</button></div>
           </div>
           <div class="source-batch-groups">
             <section class="source-batch-group source-batch-area-action">
-              <div class="source-batch-section-heading"><div><span>领域操作</span><b>调整所属领域</b></div><p>先选择领域，再决定添加到所选资料，或从所选资料移除。</p></div>
-              <span class="source-batch-field-label">要操作的领域</span>
+              <div class="source-batch-section-heading"><div><b>所属领域</b></div></div>
               <div id="sourceBatchAreaChoices" class="source-batch-area-choices"></div>
-              <div class="source-batch-group-actions"><button type="button" id="sourceBatchAddAreas">添加到所选资料</button><button type="button" id="sourceBatchRemoveAreas">从所选资料移除</button></div>
+              <div class="source-batch-group-actions"><button type="button" id="sourceBatchAddAreas">添加领域</button><button type="button" id="sourceBatchRemoveAreas">移除领域</button></div>
             </section>
             <section class="source-batch-group source-batch-reading-action">
-              <div class="source-batch-section-heading"><div><span>状态操作</span><b>修改阅读状态</b></div></div>
-              <label for="sourceBatchReadingStatus">阅读状态</label>
-              <select id="sourceBatchReadingStatus"><option value="unread">未读</option><option value="reading">处理中</option><option value="processed">已处理</option></select>
-              <button type="button" id="sourceBatchSetReadingStatus">应用到所选资料</button>
+              <div class="source-batch-section-heading"><div><b id="sourceBatchStatusHeading">阅读状态</b></div></div>
+              <select id="sourceBatchReadingStatus" aria-label="状态"><option value="unread">未读</option><option value="reading">处理中</option><option value="processed">已处理</option></select>
+              <button type="button" id="sourceBatchSetReadingStatus">更新状态</button>
             </section>
             <section class="source-batch-group source-batch-danger">
-              <div class="source-batch-section-heading"><div><span>危险操作</span><b>移到回收站</b></div></div>
-              <p>将影响 <strong id="sourceBatchTrashCount">0</strong> 份资料；原始资产不会删除。</p>
-              <button type="button" class="source-batch-trash" id="sourceBatchTrash">将所选资料移到回收站</button>
+              <div class="source-batch-section-heading"><div><b>回收站</b></div></div>
+              <button type="button" class="source-batch-trash" id="sourceBatchTrash">移到回收站</button>
             </section>
           </div>
           <p id="sourceBatchFeedback" class="source-batch-feedback"></p>
@@ -161,9 +156,8 @@
             <label>内容类型<select id="searchTypeFilter"><option value="">全部内容</option><option value="project">项目</option><option value="knowledge">知识</option><option value="source">资料</option></select></label>
             <label>所属领域<select id="searchAreaFilter"><option value="">全部领域</option></select></label>
             <label>文件格式<select id="searchFormatFilter"><option value="">全部格式</option></select></label>
-            <label>内容状态<select id="searchStatusFilter"><option value="">全部状态</option><option value="active">进行中</option><option value="paused">暂停</option><option value="done">已完成</option><option value="draft">待验证</option><option value="reviewed">已确认</option><option value="evergreen">长期有效</option><option value="unread">未读</option><option value="reading">处理中</option><option value="processed">已处理</option></select></label>
-            <label>修改日期从<input id="searchDateFrom" type="date"></label>
-            <label>修改日期到<input id="searchDateTo" type="date"></label>
+            <div class="search-status-field"><span id="searchStatusLabel">内容状态</span><select id="searchStatusFilter" hidden aria-hidden="true" tabindex="-1"><option value="">全部状态</option></select><button type="button" id="searchStatusTrigger" class="search-status-trigger" aria-labelledby="searchStatusLabel searchStatusValue" aria-haspopup="listbox" aria-expanded="false" aria-controls="searchStatusMenu"><span id="searchStatusValue">全部状态</span><span aria-hidden="true">⌄</span></button><div id="searchStatusMenu" class="search-status-menu" popover="auto" role="listbox" aria-labelledby="searchStatusLabel"></div></div>
+            <div class="search-date-filter"><span>修改日期</span><div class="search-date-range"><input id="searchDateFrom" type="date" aria-label="修改日期开始"><span>至</span><input id="searchDateTo" type="date" aria-label="修改日期结束"></div></div>
             <label>最短时长（秒）<input id="searchMinDuration" type="number" min="0" step="1" placeholder="不限"></label>
             <label>最长时长（秒）<input id="searchMaxDuration" type="number" min="0" step="1" placeholder="不限"></label>
           </div>
@@ -199,6 +193,7 @@
             <div id="graphEmpty" class="graph-empty hidden"><b>当前筛选下没有节点</b><span>调整类型或领域筛选后再查看。</span></div>
             <div class="graph-legend" aria-hidden="true"><span class="project">项目</span><span class="knowledge">知识</span><span class="source">资料</span></div>
           </div>
+          <div id="graphResizeHandle" class="graph-resize-handle" role="separator" aria-label="调整图谱详情栏宽度" aria-orientation="vertical" aria-controls="graphInspector" tabindex="0"></div>
           <aside class="graph-inspector" id="graphInspector">
             <span class="graph-inspector-kicker">当前选择</span>
             <h2>选择一个节点</h2>
@@ -211,15 +206,14 @@
 
   <dialog id="viewerDialog" class="viewer-dialog card-resizable" data-dialog-size="viewer">
     <div class="dialog-head">
-      <div class="viewer-heading"><div id="viewerMeta" class="main-card-meta hidden"></div><span id="viewerKicker">查看</span><h2 id="viewerTitle">内容</h2></div>
-      <div class="dialog-head-tools"><button type="button" class="dialog-size-reset" data-reset-dialog-size="viewer" title="恢复阅读窗口默认大小">恢复默认大小</button><div class="main-head-button-stack"><div class="main-head-nav"><button type="button" class="viewer-back hidden" id="viewerBack">← 返回</button><button type="button" class="icon-button" id="closeViewer" aria-label="关闭">×</button></div><button type="button" class="secondary main-head-action hidden" id="editViewedEntryTop">编辑</button></div></div>
+      <div class="viewer-heading" tabindex="-1" autofocus><div id="viewerMeta" class="main-card-meta hidden"></div><span id="viewerKicker">查看</span><h2 id="viewerTitle">内容</h2></div>
+      <div class="dialog-head-tools"><button type="button" class="dialog-size-reset" data-reset-dialog-size="viewer" title="恢复阅读窗口默认大小">恢复默认大小</button><div class="main-head-button-stack"><div class="main-head-nav"><button type="button" class="icon-button" id="closeViewer" aria-label="关闭">×</button></div><button type="button" class="secondary main-head-action hidden" id="editViewedEntryTop">编辑</button></div></div>
       <div id="viewerMainInfo" class="main-card-info hidden"></div>
     </div>
     <div id="viewerMainRelations" class="main-card-relations hidden"></div>
     <div id="viewerMarkdownToolbar" class="main-markdown-toolbar hidden"></div>
     <div id="viewerBody" class="viewer-body"></div>
     <div class="dialog-actions viewer-actions">
-      <p>阅读模式不会误改内容。</p>
       <div><button type="button" class="secondary hidden" id="startProjectReview">写项目复盘</button><button type="button" class="secondary" id="closeViewerBottom">关闭</button><button type="button" class="primary" id="editViewedEntry">编辑</button></div>
     </div>
     <div class="card-resize-handle" data-resize-direction="n" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="s" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="w" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="e" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="nw" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="ne" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="sw" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="se" aria-hidden="true"></div>
@@ -228,20 +222,19 @@
   <dialog id="editorDialog" class="card-resizable" data-dialog-size="editor">
     <form id="editorForm" method="dialog">
       <div class="dialog-head">
-        <div class="editor-heading"><div id="formMeta" class="main-card-meta hidden"></div><span id="formKicker">新建</span><h2 id="formTitle">随手记</h2><input id="mainTitleInput" class="main-title-input hidden" name="title" aria-label="卡片标题" disabled></div>
-        <div class="dialog-head-tools"><button type="button" class="dialog-size-reset" data-reset-dialog-size="editor" title="恢复编辑窗口默认大小">恢复默认大小</button><div class="main-head-button-stack"><div class="main-head-nav"><button type="button" class="secondary main-head-action hidden" id="mainCancelTop">取消</button><button type="button" class="icon-button" id="closeDialog" aria-label="关闭">×</button></div><button type="button" class="primary main-head-action hidden" id="mainSaveTop">保存</button></div></div>
+        <div class="editor-heading" tabindex="-1" autofocus><div id="formMeta" class="main-card-meta hidden"></div><span id="formKicker">新建</span><h2 id="formTitle">随手记</h2><input id="mainTitleInput" class="main-title-input hidden" name="title" aria-label="卡片标题" disabled></div>
+        <div class="dialog-head-tools"><button type="button" class="dialog-size-reset" data-reset-dialog-size="editor" title="恢复编辑窗口默认大小">恢复默认大小</button><div class="main-head-button-stack"><div class="main-head-nav"><button type="button" class="icon-button" id="closeDialog" aria-label="关闭">×</button></div><div class="main-head-actions"><button type="button" class="secondary main-head-action hidden" id="mainCancelTop">取消</button><button type="button" class="primary main-head-action hidden" id="mainSaveTop">保存</button></div></div></div>
         <div id="editorMainInfo" class="main-card-info hidden"></div>
       </div>
       <div id="editorMainRelations" class="main-card-relations hidden"></div>
       <div id="editorMarkdownToolbar" class="main-markdown-toolbar hidden"></div>
       <div id="formFields" class="form-fields"></div>
       <div class="dialog-actions">
-        <p id="formHint">先记录，不要求完整。</p>
         <div><button type="button" class="secondary hidden" id="restoreEntry">恢复</button><button type="button" class="secondary hidden" id="permanentDelete">永久删除</button><button type="button" class="secondary" id="deleteEntry">移到回收站</button><button type="button" class="secondary" id="cancelEdit">取消</button><button type="submit" class="primary" id="saveEntry">保存</button></div>
       </div>
     </form>
     <div id="richColorPalette" class="rich-color-palette hidden"></div>
-    <div id="richImageControls" class="rich-image-controls hidden"><button type="button" data-image-drag aria-label="拖动图片">⋮⋮</button><button type="button" data-image-layout-option="full">大图</button><button type="button" data-image-layout-option="left">靠左</button><button type="button" data-image-layout-option="right">靠右</button><button type="button" data-image-delete aria-label="删除图片">删除</button></div>
+     <div id="richImageControls" class="rich-image-controls hidden"><button type="button" data-image-layout-option="full">大图</button><button type="button" data-image-layout-option="left">靠左</button><button type="button" data-image-layout-option="right">靠右</button><button type="button" data-image-delete aria-label="删除图片">删除</button></div><div id="richImageResizeHandles" class="rich-image-resize-handles hidden" aria-label="调整图片大小"><span data-rich-image-resize="nw"></span><span data-rich-image-resize="ne"></span><span data-rich-image-resize="sw"></span><span data-rich-image-resize="se"></span></div>
     <div id="imageDropPreview" class="image-drop-preview hidden" aria-hidden="true"></div>
     <div class="card-resize-handle" data-resize-direction="n" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="s" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="w" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="e" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="nw" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="ne" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="sw" aria-hidden="true"></div><div class="card-resize-handle" data-resize-direction="se" aria-hidden="true"></div>
   </dialog>
@@ -275,6 +268,11 @@
         <div id="vaultResult" class="data-health-report"></div>
       </section>
 
+      <section class="data-section index-section">
+        <div class="data-section-head"><div><b>附件缓存</b><p>已保存附件从资料库读取。清理会移除旧版完整缓存及未使用的草稿，保留正在编辑或预览的草稿。清理旧缓存后，将无法用它恢复缺失的原文件。</p></div></div>
+        <div id="attachmentCacheStatus" class="data-health-report">尚未统计</div>
+        <div class="vault-actions"><button type="button" class="outline-small" id="refreshAttachmentCache">查看占用</button><button type="button" class="secondary" id="clearAttachmentCache">清理旧缓存和未使用草稿</button></div>
+      </section>
       <section class="data-section index-section">
         <div class="data-section-head"><div><b>SQLite 搜索目录</b><p>它只负责快速检索，可以随时从卡片重新生成，不是唯一数据副本。</p></div><span id="indexStatusBadge" class="vault-badge checking">检查中</span></div>
         <div id="indexStatusDetails" class="data-health-report"></div>
@@ -349,6 +347,13 @@
   <script src="source-batch.js"></script>
   <script src="collection-filter.js"></script>
   <script src="semantic-search-flow.js"></script>
+  <link rel="stylesheet" href="cover-ui.css">
+  <link rel="stylesheet" href="frosted-cards.css">
+  <script src="cover-ui.js" defer></script>
+  <script src="sidebar-resize.js"></script>
+  <script src="graph-resize.js"></script>
   <script src="app.js"></script>
+  <script src="attachment-cache.js"></script>
+  <script src="activity-tooltip.js"></script>
 </body>
 </html>

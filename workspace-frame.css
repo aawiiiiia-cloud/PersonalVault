@@ -1,0 +1,69 @@
+/* Keep the workspace boundary visible while its contents scroll inside it. */
+html {scrollbar-gutter:auto;scrollbar-width:none;}
+body,body main {scrollbar-width:none;}
+html::-webkit-scrollbar,body::-webkit-scrollbar,body main::-webkit-scrollbar {width:0;height:0;display:none;}
+
+body:not(.standalone-card-window)>.app-shell {
+  margin:8px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  overflow:hidden;
+}
+@media(min-width:761px) {
+  body:not(.standalone-card-window) {height:100dvh;overflow:hidden;}
+  body:not(.standalone-card-window)>.app-shell {height:calc(100dvh - 16px);min-height:0;}
+  body.desktop-shell:not(.standalone-card-window)>.app-shell {margin-top:0;height:calc(100dvh - 48px);}
+  body:has(.graph-view.active):not(.standalone-card-window)>.app-shell {height:calc(100dvh - 16px);min-height:0;}
+  body.desktop-shell:has(.graph-view.active):not(.standalone-card-window)>.app-shell {height:calc(100dvh - 48px);}
+  body:not(.standalone-card-window)>.app-shell>.sidebar {position:static;height:100%;min-height:0;}
+  body:not(.standalone-card-window)>.app-shell>main {min-height:0;overflow-y:auto;overscroll-behavior:contain;}
+  body:has(.graph-view.active):not(.standalone-card-window)>.app-shell>main {height:100%;overflow:hidden;}
+}
+@media(max-width:760px) {
+  body:not(.standalone-card-window)>.app-shell {margin:6px;min-height:calc(100dvh - 12px);border-radius:8px;}
+}
+
+/* Page identity is already shown in the sidebar. Keep the header compact. */
+.app-shell>main .workspace-title {display:none;}
+.app-shell>main .topbar {justify-content:flex-end;margin-bottom:16px;}
+body:not(.desktop-shell)>.app-shell>main {padding-top:20px;}
+.app-shell>main:has(#graphView.active) .workspace-header {display:none;}
+.home-header-controls {display:none;}
+.app-shell>main:has(#homeView.active) .home-header-controls {display:block;}
+.app-shell>main:has(#homeView.active) {padding-top:28px;container-type:inline-size;}
+.app-shell>main:has(#homeView.active) .workspace-header {display:grid;grid-template-columns:max-content minmax(0,340px);justify-content:space-between;gap:clamp(8px,2cqw,20px);align-items:center;margin-bottom:28px;}
+.app-shell>main:has(#homeView.active) :is(.topbar,.home-header-controls) {display:contents;}
+.app-shell>main:has(#homeView.active) .search-wrap {grid-column:2;grid-row:1;width:100%;min-width:0;margin:0;}
+.app-shell>main:has(#homeView.active) .home-quick-actions {grid-column:1;grid-row:1;margin:0;flex-wrap:nowrap;gap:clamp(4px,1.2cqw,8px);overflow:visible;}
+.app-shell>main:has(#homeView.active) :is(.home-quick-actions button,.search-wrap input) {height:42px;flex-shrink:0;white-space:nowrap;}
+.app-shell>main:has(#homeView.active) .home-quick-actions button {padding-inline:clamp(4px,calc(3cqw - 8px),14px);font-size:clamp(10px,2cqw,12px);}
+
+/* Keep both collection header rows intact when the workspace narrows. */
+  .app-shell>main:has(#collectionView.active) {container-type:inline-size;}
+  .app-shell>main:has(#collectionView.active) .workspace-header {
+    display:grid;grid-template-columns:max-content minmax(0,340px);justify-content:space-between;
+    align-items:center;gap:14px clamp(6px,2cqw,20px);padding:8px 0 10px;
+    border-bottom:1px solid var(--line);
+  }
+  .app-shell>main:has(#collectionView.active) :is(.topbar,.collection-header-controls,.collection-toolbar) {display:contents;}
+  .app-shell>main:has(#collectionView.active) .search-wrap {grid-column:2;grid-row:1;width:100%;min-width:0;margin:0;}
+  .app-shell>main:has(#collectionView.active) .collection-filters {grid-column:1;grid-row:1;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:clamp(4px,1.4cqw,14px);}
+  .app-shell>main:has(#collectionView.active) .filter-row {flex-wrap:nowrap;gap:clamp(2px,.6cqw,6px);}
+  .app-shell>main:has(#collectionView.active) .filter-row button {flex-shrink:0;white-space:nowrap;padding-inline:clamp(2px,calc(2cqw - 6px),13px);font-size:clamp(9px,2cqw,12px);}
+  .app-shell>main:has(#collectionView.active) .collection-area-filter {flex-shrink:0;padding-left:clamp(4px,1.4cqw,14px);gap:clamp(3px,.7cqw,7px);}
+  .app-shell>main:has(#collectionView.active) .collection-area-filter span {font-size:clamp(9px,1.5cqw,10.5px);}
+  .app-shell>main:has(#collectionView.active) .collection-area-filter select {min-width:0;width:clamp(80px,15cqw,132px);padding-inline:clamp(4px,.9cqw,9px) 16px;font-size:clamp(9px,1.8cqw,11.5px);}
+  .app-shell>main:has(#collectionView.active) .collection-actions {grid-column:1/-1;grid-row:2;justify-self:end;justify-content:flex-end;flex-wrap:nowrap;flex-direction:row;width:auto;gap:clamp(4px,.8cqw,8px);}
+  .app-shell>main:has(#collectionView.active) .stats-row {grid-column:1/-1;grid-row:2;justify-self:start;flex-wrap:nowrap;border:0;padding:0;margin:0;align-items:center;gap:clamp(4px,calc(4cqw - 16px),24px);}
+  .app-shell>main:has(#collectionView.active) :is(.search-wrap input,.filter-row button,.collection-area-filter select) {height:42px;}
+  .app-shell>main:has(#collectionView.active) .collection-actions {min-height:38px;}
+  .app-shell>main:has(#collectionView.active) .collection-actions>button,
+  .app-shell>main:has(#collectionView.active) #collectionCreate {height:38px;}
+  .app-shell>main:has(#collectionView.active) .display-toggle {height:38px;align-items:center;}
+  .app-shell>main:has(#collectionView.active) .collection-actions button {padding-inline:clamp(4px,calc(3cqw - 8px),15px);font-size:clamp(9px,2cqw,12px);}
+  .app-shell>main:has(#collectionView.active) .display-toggle button {padding-inline:clamp(3px,calc(2cqw - 4px),12px);font-size:clamp(9px,1.8cqw,11px);}
+  .app-shell>main:has(#collectionView.active) .stats-row {min-height:38px;}
+  .app-shell>main:has(#collectionView.active) .stat {align-items:center;gap:clamp(3px,.7cqw,7px);white-space:nowrap;}
+  .app-shell>main:has(#collectionView.active) .stat b {font-size:clamp(11px,2.2cqw,14px);}
+  .app-shell>main:has(#collectionView.active) .stat span {font-size:clamp(9px,1.8cqw,11px);}
+  .app-shell>main:has(#collectionView.active) .stat :is(b,span) {line-height:20px;}

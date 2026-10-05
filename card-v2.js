@@ -50,6 +50,8 @@
       relatedRefs:uniqueIds([...(entry.relatedRefs || []),...(entry.projectRefs || [])]).filter(id=>id!==entry.id)
     };
     if (entry.archived) output.archived=true;
+    if (entry.canvasVersion === 1) output.canvasVersion=1;
+    if (typeof entry.legacyContent === "string") output.legacyContent=entry.legacyContent;
     if (Array.isArray(entry.sourceRefs) && entry.sourceRefs.length) output.sourceRefs=uniqueIds(entry.sourceRefs);
     const original=captureOriginal(entry.originalCapture);
     if (original) output.originalCapture=original;

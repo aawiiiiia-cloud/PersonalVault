@@ -9,7 +9,7 @@ import { DEFAULT_EMBEDDING_MODEL_ID, getEmbeddingProfile, listEmbeddingProfiles 
 export const DEFAULT_EMBEDDING_MODEL = DEFAULT_EMBEDDING_MODEL_ID;
 const LEGACY_INDEX_RELATIVE_PATH = path.join("系统", "索引", "semantic.sqlite");
 const MEANING_FIELDS = [
-  "goal", "origin", "content",
+  "goal", "origin", "content", "existingSolution", "agentWork",
   "description", "scope", "rawContent", "challenge", "desired", "customDecision", "myRole", "nextStep",
   "tasks", "result", "worked", "problems", "lesson", "conclusion", "applies", "limits", "summaryText", "candidate"
 ];
@@ -304,15 +304,30 @@ export function semanticQueryEligibility(value) {
   return { eligible:true, reason:null };
 }
 
+// Very short CJK terms have little context and E5 gives unrelated passages
+// similar scores. Require a textual anchor for those terms only; full queries
+// continue to use semantic similarity without a literal-overlap requirement.
+export function shortQueryHasEvidence(query, text) {
+  const term = String(query || "").trim();
+  const passage = String(text || "");
+  if (/^[A-Za-z]{2,4}$/.test(term)) return new RegExp(`\\b${term}`,"i").test(passage);
+  if (!/^[\u3400-\u9fff]{1,3}$/.test(term)) return true;
+  if (passage.includes(term)) return true;
+  // A color suffix alone is not evidence: 黑色 must not match 我的角色.
+  const anchors = [...term].filter(character => term.length === 1 || !"的了是与和色".includes(character));
+  return anchors.some(character => passage.includes(character));
+}
+
 export function selectRelevantSemanticResults(results, options = {}) {
-  const sorted = [...(results || [])].sort((a,b) => b.semanticScore - a.semanticScore);
+  const candidates = results || [];
+  const sorted = candidates.filter(result => result.shortQueryEvidence !== false).sort((a,b) => b.semanticScore - a.semanticScore);
   const minimumScore = Number.isFinite(Number(options.minimumScore)) ? Number(options.minimumScore) : 0.35;
   const maxDrop = Number.isFinite(Number(options.maxDrop)) ? Number(options.maxDrop) : 0.12;
   const limit = Math.min(Math.max(Number(options.limit) || 80,1),200);
-  if (!sorted.length) return { results:[], threshold:minimumScore, rejectedCount:0 };
+  if (!sorted.length) return { results:[], threshold:minimumScore, rejectedCount:candidates.length };
   const threshold = Math.max(minimumScore, sorted[0].semanticScore - maxDrop);
   const selected = sorted.filter(result => result.semanticScore >= threshold).slice(0,limit);
-  return { results:selected, threshold, rejectedCount:sorted.length - selected.length };
+  return { results:selected, threshold, rejectedCount:candidates.length - selected.length };
 }
 
 export async function semanticSearch(vaultRoot, options = {}) {
@@ -332,6 +347,7 @@ export async function semanticSearch(vaultRoot, options = {}) {
     const results = rows.map(row => ({
       id:row.card_id,
       semanticScore:dot(queryVector,vectorFromBuffer(row.vector,row.dimension)),
+      shortQueryEvidence:shortQueryHasEvidence(query,row.semantic_text),
       type:row.type,
       updatedAt:row.updated_at
     })).sort((a,b) => b.semanticScore - a.semanticScore).slice(0,limit);
@@ -366,7 +382,7 @@ export async function semanticIndexStatus(vaultRoot, options = {}) {
       const needsRebuild = meta.profileId !== profile.id || Number(meta.cardCount || 0) !== sourceCount || meta.sourceHash !== documentsHash(documents);
       return {
         exists:true,
-        healthy:true,
+        healthy:Number(meta.dimension || 0) === profile.dimension && Number(meta.cardCount || 0) === Number(db.prepare("SELECT count(*) AS count FROM embeddings").get().count),
         path:dbPath,
         size:stat.size,
         updatedAt:meta.updatedAt,

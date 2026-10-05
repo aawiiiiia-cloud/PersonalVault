@@ -1,0 +1,94 @@
+#stage[data-document="true"] {cursor:auto;touch-action:auto;background-image:none;}
+.file-preview {position:absolute;inset:0;display:flex;flex-direction:column;color:var(--file-ink);--file-ink:#1d1f26;--file-panel:#fafbfd;--file-line:#d9dce5;background:var(--file-panel);}
+[data-theme="dark"] .file-preview {--file-ink:#e4e8f1;--file-panel:#242a37;--file-line:#414a5e;color-scheme:dark;}
+.file-toolbar {display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 14px;border-bottom:1px solid var(--file-line);flex:none;}
+.file-toolbar button,.file-toolbar input,.file-toolbar select {font-size:13px;font-family:inherit;color:inherit;background:var(--file-panel);border:1px solid var(--file-line);border-radius:6px;min-height:30px;padding:4px 8px;}
+.file-toolbar input[type=number] {width:68px;}
+.file-toolbar input[type=search] {width:180px;}
+.document-scroll {flex:1;min-height:0;overflow:auto;padding:20px;}
+.text-reading {white-space:pre-wrap;overflow-wrap:anywhere;font:16px/1.75 'Microsoft YaHei',sans-serif;margin:0;user-select:text;}
+.markdown-reading {max-width:960px;margin:auto;font-size:16px;line-height:1.8;overflow-wrap:anywhere;user-select:text;}
+.markdown-reading img {position:static!important;max-width:100%!important;max-height:600px!important;transform:none!important;box-shadow:none!important;}
+.markdown-reading pre {overflow:auto;padding:12px;border:1px solid var(--file-line);border-radius:8px;}
+.markdown-reading table,.csv-reading {border-collapse:collapse;width:100%;font-size:14px;}
+.markdown-reading td,.markdown-reading th,.csv-reading td,.csv-reading th {border:1px solid var(--file-line);padding:7px 10px;text-align:left;white-space:pre-wrap;max-width:420px;overflow-wrap:anywhere;}
+.csv-reading th {position:sticky;top:0;background:var(--file-panel);cursor:pointer;}
+.audio-reading {margin:auto;width:min(650px,90%);text-align:center;}
+.audio-reading audio {width:100%;margin:24px 0;}
+.audio-reading h2 {overflow-wrap:anywhere;}
+.pdf-page {position:relative;margin:0 auto 24px;width:max-content;background:white;color:black;}
+.pdf-page canvas {display:block;}
+.pdf-page .textLayer {position:absolute;inset:0;overflow:hidden;line-height:1;text-align:initial;transform-origin:0 0;user-select:text;}
+.pdf-page .textLayer span,.pdf-page .textLayer br {color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0 0;}
+.pdf-page .textLayer {--min-font-size:1;--text-scale-factor:calc(var(--total-scale-factor) * var(--min-font-size));--min-font-size-inv:calc(1 / var(--min-font-size));}
+.pdf-page .textLayer > :not(.markedContent),.pdf-page .textLayer .markedContent span:not(.markedContent) {--font-height:0;font-size:calc(var(--text-scale-factor) * var(--font-height));--scale-x:1;--rotate:0deg;transform:rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));}
+.pdf-page .textLayer .markedContent {display:contents;}
+.pdf-page .textLayer ::selection {background:#4361ee66;}
+.epub-reading {flex:1;min-height:0;}
+.model-reading {flex:1;min-height:0;position:relative;}
+.model-reading canvas {display:block;width:100%;height:100%;}
+.file-status {font-size:12px;opacity:.7;}
+#attachment-select {height:32px;max-width:260px;padding:0 8px;border-radius:7px;font-size:12px;-webkit-app-region:no-drag;}
+.viewer-file-actions {display:flex;gap:6px;align-items:center;}
+.viewer-file-actions button {font-size:11px;font-family:inherit;color:inherit;background:transparent;border:1px solid #78808f;border-radius:6px;height:30px;padding:0 8px;}
+#loading {z-index:5;max-width:90%;}
+.viewer-footer {justify-content:flex-end;}
+.viewer-file-actions {margin-right:auto;}
+#attachment-select {min-width:0;width:260px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 260px;}
+.epub-layout {display:flex;flex:1;min-height:0;overflow:hidden;}
+.epub-sidebar {width:210px;flex:none;padding:12px 8px;overflow:auto;border-right:1px solid var(--file-line);background:color-mix(in srgb,var(--file-panel),var(--file-ink) 4%);}
+.epub-sidebar h3 {font-size:13px;margin:8px 10px 12px;}
+.epub-sidebar button {font:inherit;font-size:13px;color:inherit;background:transparent;border:0;border-radius:5px;cursor:pointer;min-height:34px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.epub-chapters button {display:block;width:100%;padding:6px 12px;}
+.epub-sidebar button:hover,.epub-chapters button.active {background:color-mix(in srgb,var(--file-panel),var(--file-ink) 10%);}
+.epub-bookmarks p {font-size:12px;opacity:.6;padding:0 10px;}
+.epub-bookmark {display:flex;min-width:0;}
+.epub-bookmark button:first-child {flex:1;min-width:0;}
+.epub-bookmark button:last-child {flex:none;width:30px;text-align:center;}
+.epub-reading {min-width:0;overflow:hidden;}
+.epub-footer {display:flex;align-items:center;justify-content:center;gap:14px;padding:8px 14px;border-top:1px solid var(--file-line);flex:none;}
+.epub-footer button {font:inherit;font-size:13px;padding:4px 10px;min-height:30px;border:1px solid var(--file-line);border-radius:6px;color:inherit;background:var(--file-panel);}
+.epub-page-number {font-size:13px;min-width:110px;text-align:center;font-variant-numeric:tabular-nums;}
+.epub-pagination-measure {position:fixed;left:-100000px;top:0;visibility:hidden;pointer-events:none;overflow:hidden;}
+@media(max-width:700px){.epub-sidebar {width:160px;} .epub-sidebar button {font-size:12px;}}
+@supports(appearance:base-select){
+  #attachment-select,#attachment-select::picker(select){appearance:base-select;}
+  #attachment-select>button{flex:1;min-width:0;border:0;padding:0;background:transparent;color:inherit;font:inherit;text-align:left;overflow:hidden;}
+  #attachment-select selectedcontent{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #attachment-select::picker-icon{flex:none;margin-left:auto;}
+  #attachment-select::picker(select){width:anchor-size(width);min-width:anchor-size(width);max-width:anchor-size(width);padding:4px;border:1px solid #d9dce5;border-radius:7px;background:#fff;color:#474c59;box-sizing:border-box;}
+  #attachment-select option{max-width:100%;overflow:hidden;white-space:nowrap;font-size:12px;min-height:30px;padding:6px;}
+  [data-theme="dark"] #attachment-select::picker(select){color:#e4e8f1;background:#30384a;border-color:#4a5368;}
+}
+.epub-footer {justify-content:flex-start;gap:6px;padding:4px 12px;}
+.epub-footer button {border:0;background:transparent;min-width:28px;min-height:24px;padding:0 5px;font-size:18px;line-height:1;}
+.epub-page-position {display:flex;align-items:center;gap:0;border:1px solid var(--file-line);border-radius:5px;background:var(--file-panel);padding:0 6px;}
+.epub-page-input {width:46px;font:inherit;font-size:12px;color:inherit;text-align:right;border:0;outline:none;background:transparent;appearance:textfield;}
+.epub-page-input::-webkit-inner-spin-button {appearance:none;}
+.epub-page-number {min-width:55px;max-width:150px;white-space:nowrap;font-size:12px;text-align:left;}
+.epub-bookmark-section summary {font-weight:600;font-size:13px;padding:8px 10px;cursor:pointer;}
+.epub-bookmark button:not(:first-child){flex:none;width:28px;text-align:center;}
+.epub-bookmark input {flex:1;min-width:0;width:0;font:inherit;font-size:13px;color:inherit;background:var(--file-panel);border:1px solid var(--file-line);border-radius:4px;}
+.file-page-footer {border-top:1px solid var(--file-line);border-bottom:0;justify-content:flex-start;}
+.reader-icon {display:block;width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+.reader-icon-button,.epub-footer button {display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+.epub-sidebar {scrollbar-width:none;}
+.epub-sidebar::-webkit-scrollbar {display:none;width:0;height:0;}
+.epub-sidebar-head {display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.epub-sidebar-head button {display:inline-flex;align-items:center;justify-content:center;min-width:30px;}
+@supports(appearance:base-select){
+  #attachment-select {display:inline-flex;align-items:center;}
+  #attachment-select>button {display:flex;align-items:center;justify-content:center;height:100%;min-height:0;line-height:1.3;}
+  #attachment-select selectedcontent {flex:1;text-align:center;line-height:1.3;}
+}
+[data-theme="dark"] body {color:var(--ink);background:var(--panel);}
+[data-theme="dark"] .file-preview {--file-ink:var(--ink);--file-panel:var(--panel);--file-line:var(--line);}
+[data-theme="dark"] .viewer-header,[data-theme="dark"] .viewer-footer,[data-theme="dark"] #loading {color:var(--ink);background:var(--panel);border-color:var(--line);}
+[data-theme="dark"] .viewer-heading select,[data-theme="dark"] #attachment-select::picker(select),[data-theme="dark"] .viewer-navigation button,[data-theme="dark"] .zoom-controls button {color:var(--ink);background:var(--card);border-color:var(--line-strong);}
+[data-theme="dark"] #media-name,[data-theme="dark"] #page-count,[data-theme="dark"] #zoom-value {color:var(--muted);}
+[data-theme="dark"] .viewer-heading select:focus-visible {outline-color:var(--muted);}
+:root[data-theme="dark"] {--panel:#1d1e20;--card:#242528;--line:#34363a;--line-strong:#4a4d52;}
+[data-theme="dark"] #stage {background-color:#1b1c1f;background-image:radial-gradient(#36383d .8px,transparent .8px);}
+[data-theme="dark"] #stage[data-document="true"] {background-image:none;}
+.viewer-header,.viewer-footer,.file-toolbar,.epub-sidebar,.epub-footer {user-select:none;-webkit-user-select:none;}
+.file-toolbar input,.epub-sidebar input,.epub-footer input {user-select:text;-webkit-user-select:text;}

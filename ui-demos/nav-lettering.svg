@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <!-- Geometric lettering drawn for this demo. Each glyph uses a 100 × 100 grid. -->
+  <symbol id="xiang" viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-width="11" stroke-linecap="square" stroke-linejoin="miter"><path d="M8 18H37M23 20V70M6 78L40 67M48 12H94M71 13L65 29M50 73V32H91V73M71 48V68L48 91M77 80L94 91"/></g></symbol>
+  <symbol id="mu" viewBox="0 0 100 100"><path fill="currentColor" fill-rule="evenodd" d="M12 6H88V94H12ZM25 19V32H75V19ZM25 44V57H75V44ZM25 69V81H75V69Z"/></symbol>
+  <symbol id="zhi" viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-width="11" stroke-linecap="square"><path d="M21 8L11 28M20 22H47M7 48H49M30 23V56L8 87M29 61L47 80"/></g><path fill="currentColor" fill-rule="evenodd" d="M56 18H95V84H56ZM68 30V72H83V30Z"/></symbol>
+  <symbol id="shi" viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-width="11" stroke-linecap="square"><path d="M12 9L24 21M7 36H24V81L39 70M56 75L45 91M79 75L93 91"/></g><path fill="currentColor" fill-rule="evenodd" d="M43 12H94V61H43ZM55 24V49H82V24Z"/></symbol>
+  <symbol id="zi" viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="square"><path d="M11 11L25 18M8 38L27 26M50 8L40 26M48 17H91L85 31M63 23V33L39 48M64 34L90 47M19 80V57H81V80M50 67V79L13 94M59 84L88 94"/></g></symbol>
+  <symbol id="liao" viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="square"><path d="M28 8V90M8 14L15 28M47 14L40 28M7 42H49M27 44L7 77M31 52L47 71M62 13L71 22M60 36L70 45M82 8V92M56 66L94 57"/></g></symbol>
+</svg>

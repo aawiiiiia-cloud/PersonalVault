@@ -10,7 +10,7 @@ assert.equal(windows.autoHideMenuBar,true);
 assert.deepEqual(windows.titleBarOverlay,TITLEBAR_OVERLAY);
 assert.equal(windows.titleBarOverlay.height,TITLEBAR_HEIGHT);
 assert.equal(windows.titleBarOverlay.color,"#00000000","Windows 原生按钮覆盖层必须透明，以显示页面标题栏和模态遮罩");
-assert.equal(windows.titleBarOverlay.symbolColor,"#474c59","透明覆盖层上仍需保持清晰的原生按钮符号");
+assert.equal(windows.titleBarOverlay.symbolColor,"#9299a8","透明覆盖层上的原生按钮使用浅灰色符号");
 assert.equal(applicationMenuTemplate("win32"),null);
 
 const mac=windowShellOptions("darwin");

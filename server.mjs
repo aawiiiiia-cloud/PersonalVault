@@ -34,6 +34,7 @@ function detectVaultRoot() {
         });
     } catch {}
   }
+  candidates.push(path.join(APP_ROOT, "PersonalVault"));
   const found = candidates.find(candidate => existsSync(path.join(candidate, "vault.json")));
   if (found) return path.resolve(found);
   return path.resolve(process.platform === "win32" ? "E:\\PersonalVault" : "/Volumes/PersonalVault");
@@ -41,12 +42,15 @@ function detectVaultRoot() {
 
 const VAULT_ROOT = detectVaultRoot();
 const MAX_BODY = 20 * 1024 * 1024;
+const MAX_CANVAS_BODY = 100 * 1024 * 1024;
 const execFileAsync = promisify(execFile);
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".wasm": "application/wasm",
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml"
 };
@@ -207,7 +211,7 @@ function integrityReport(files, manifest) {
 export async function ensureVault() {
   const folders = [
     "卡片/随手记", "卡片/领域", "卡片/项目", "卡片/项目复盘", "卡片/知识", "卡片/资料", "卡片/回收站",
-    "文件/图片", "文件/视频", "文件/音频", "文件/文档", "文件/模型", "文件/工程", "文件/其他",
+    "文件/项目", "文件/知识", "文件/资料",
     "系统/索引", "系统/预览缓存", "系统/日志"
   ];
   await Promise.all(folders.map(folder => fs.mkdir(path.join(VAULT_ROOT, folder), { recursive: true })));
@@ -300,6 +304,15 @@ async function syncCardsOnce(payload) {
   const changes = [];
   const beforeFiles = await markdownInventory();
   for (const card of cards) {
+    const previousInfo=previous.cards?.[card.id];
+    if(/^[a-zA-Z0-9_-]{1,128}$/.test(String(card.id)) && (previousInfo?.title!==card.title || previousInfo?.type!==card.type))await queueCanvasStorage(async()=>{
+      const attachments=await readCardAttachments(card.id);
+      if(attachments.directory) {
+        await prepareCardDirectory(attachments,card);
+        const primary=attachments.assets[card.assetId];
+        if(primary)card.assetPath=primary.relativePath || primary.absolutePath;
+      }
+    });
     const directory = card.deletedAt ? "回收站" : TYPE_DIR[card.type];
     if (!directory) throw new Error(`无法识别卡片类型：${card.type}`);
     const filename = `${safeTitle(card.title)}--${safeTitle(card.id)}.md`;
@@ -397,6 +410,18 @@ export async function warmSemantic(options = {}) {
   return warmSemanticModel(VAULT_ROOT, semanticOptions(options));
 }
 
+const pendingSemanticUpdates = new Map();
+async function ensureCurrentSemanticIndex(options) {
+  const key = options.semanticModel || "default";
+  if (pendingSemanticUpdates.has(key)) return pendingSemanticUpdates.get(key);
+  const pending = (async () => {
+    const status = await getSemanticStatus(options);
+    if (!status.healthy || status.needsRebuild) await rebuildSemantic(options);
+  })();
+  pendingSemanticUpdates.set(key, pending);
+  try { await pending; } finally { pendingSemanticUpdates.delete(key); }
+}
+
 export async function queryCombinedSearch(options = {}) {
   const searchOptions = { ...options, types:["project","knowledge","source"] };
   const exact = await querySearchIndex(searchOptions);
@@ -405,9 +430,8 @@ export async function queryCombinedSearch(options = {}) {
   if (!eligibility.eligible) {
     return { ...exact, engine:"exact", semanticSkipped:eligibility.reason };
   }
-  const status = await getSemanticStatus(options);
-  if (!status.healthy) return { ...exact, engine:"exact", semanticUnavailable:true };
   try {
+    await ensureCurrentSemanticIndex(options);
     const semantic = await semanticSearch(VAULT_ROOT, semanticOptions(searchOptions));
     const relevant = selectRelevantSemanticResults(semantic.results, {
       limit:options.limit,
@@ -487,22 +511,6 @@ async function writeAssetManifest(manifest) {
   await writeDurable(path.join(VAULT_ROOT, "系统", "assets-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
-async function uniqueDestination(directory, fileName, incomingHash) {
-  const parsed = path.parse(fileName);
-  let index = 1;
-  while (true) {
-    const suffix = index === 1 ? "" : ` (${index})`;
-    const candidate = path.join(directory, `${safeTitle(parsed.name)}${suffix}${parsed.ext.toLowerCase()}`);
-    try {
-      await fs.access(candidate);
-      if (await hashFile(candidate) === incomingHash) return { path:candidate, duplicate:true };
-      index += 1;
-    } catch {
-      return { path:candidate, duplicate:false };
-    }
-  }
-}
-
 function portableAssetPath(absolutePath) {
   const resolved = path.resolve(absolutePath);
   return resolved.startsWith(VAULT_ROOT + path.sep) ? relativeSlash(path.relative(VAULT_ROOT, resolved)) : null;
@@ -512,7 +520,6 @@ export async function importFiles(sourcePaths, mode = "copy") {
   if (!["copy", "move", "register"].includes(mode)) throw new Error("无法识别的导入方式");
   if (!Array.isArray(sourcePaths) || !sourcePaths.length) return { assets:[], skipped:[] };
   await ensureVault();
-  const manifest = await readAssetManifest();
   const assets = [];
   const skipped = [];
 
@@ -521,41 +528,29 @@ export async function importFiles(sourcePaths, mode = "copy") {
     const stat = await fs.stat(absoluteSource);
     if (!stat.isFile()) { skipped.push({ path:absoluteSource, reason:"不是普通文件" }); continue; }
     const contentHash = await hashFile(absoluteSource);
-    const existing = Object.values(manifest.assets).find(asset => asset.contentHash === contentHash && asset.size === stat.size);
-    if (existing) {
-      const existingPath = existing.relativePath ? path.join(VAULT_ROOT, existing.relativePath) : existing.absolutePath;
-      try {
-        await fs.access(existingPath);
-        assets.push({ ...existing, duplicate:true, message:"内容完全相同，已复用知识库中的现有文件" });
-        continue;
-      } catch {}
-    }
-
     const category = categoryFor(absoluteSource);
-    const id = crypto.randomUUID();
+    const id = ownedAssetId();
+    const ownerCardId=crypto.randomUUID();
+    const manifest=await readCardAttachments(ownerCardId);
+    const destinationDir=await prepareCardDirectory(manifest,{title:path.parse(absoluteSource).name,type:'source'});
     let finalPath = absoluteSource;
     let relativePath = portableAssetPath(absoluteSource);
     let portable = Boolean(relativePath);
 
     if (mode !== "register") {
-      const destinationDir = path.join(VAULT_ROOT, "文件", category);
-      await fs.mkdir(destinationDir, { recursive:true });
-      const destination = await uniqueDestination(destinationDir, path.basename(absoluteSource), contentHash);
-      finalPath = destination.path;
+      finalPath = await unusedAttachmentPath(destinationDir,path.basename(absoluteSource));
       relativePath = portableAssetPath(finalPath);
       portable = true;
-      if (!destination.duplicate) {
-        await fs.copyFile(absoluteSource, finalPath);
-        const copiedHash = await hashFile(finalPath);
-        if (copiedHash !== contentHash) throw new Error(`复制校验失败：${path.basename(absoluteSource)}`);
-        if (mode === "move") await fs.unlink(absoluteSource);
-      }
+      await fs.copyFile(absoluteSource, finalPath);
+      const copiedHash = await hashFile(finalPath);
+      if (copiedHash !== contentHash) throw new Error(`复制校验失败：${path.basename(absoluteSource)}`);
     }
 
     const finalStat = await fs.stat(finalPath);
     const media = await probeMedia(finalPath, category);
     const asset = {
       id,
+      ownerCardId,
       originalName:path.basename(source),
       displayName:path.basename(finalPath),
       extension:path.extname(finalPath).toLowerCase(),
@@ -571,16 +566,16 @@ export async function importFiles(sourcePaths, mode = "copy") {
       ...media
     };
     manifest.assets[id] = asset;
+    await writeCardAttachments(manifest);
+    if(mode==='move')await fs.unlink(absoluteSource);
     assets.push(asset);
   }
 
-  await writeAssetManifest(manifest);
   return { assets, skipped };
 }
 
 export async function getAsset(assetId) {
-  const manifest = await readAssetManifest();
-  const asset = manifest.assets?.[assetId];
+  const asset = await readStoredAsset(assetId);
   if (!asset) throw new Error("没有找到对应的文件记录");
   const absolutePath = asset.relativePath ? path.join(VAULT_ROOT, asset.relativePath) : asset.absolutePath;
   return { ...asset, absolutePath };
@@ -588,14 +583,14 @@ export async function getAsset(assetId) {
 
 async function videoPreviewPath(asset) {
   const previewDir = path.join(VAULT_ROOT, "系统", "预览缓存");
-  const target = path.join(previewDir, `${asset.id}.jpg`);
+  const target = path.join(previewDir, `${asset.id}-first-frame.jpg`);
   await fs.mkdir(previewDir, { recursive:true });
   try {
     const [sourceStat, previewStat] = await Promise.all([fs.stat(asset.absolutePath), fs.stat(target)]);
     if (previewStat.mtimeMs >= sourceStat.mtimeMs) return target;
   } catch {}
   const duration = Number(asset.durationSeconds);
-  const seek = Number.isFinite(duration) && duration > 0 ? Math.min(duration * 0.1, 30) : 1;
+  const seek = 0;
   try {
     await execFileAsync("ffmpeg", [
       "-hide_banner", "-loglevel", "error", "-ss", String(seek), "-i", asset.absolutePath,
@@ -639,9 +634,9 @@ async function removeAssetCoverFile(assetId, relativePath) {
 }
 
 export async function setAssetCover(assetId, selectedPath) {
+  return queueCanvasStorage(async()=>{
   await ensureVault();
-  const manifest = await readAssetManifest();
-  const asset = manifest.assets?.[assetId];
+  const asset = await readStoredAsset(assetId);
   if (!asset) throw new Error("没有找到对应的文件记录");
   const absolutePath = path.resolve(selectedPath);
   const stat = await fs.stat(absolutePath);
@@ -652,24 +647,26 @@ export async function setAssetCover(assetId, selectedPath) {
   await fs.copyFile(absolutePath, target);
   if (asset.coverRelativePath !== relativePath) await removeAssetCoverFile(assetId,asset.coverRelativePath);
   asset.coverRelativePath = relativePath;
-  await writeAssetManifest(manifest);
+  await updateStoredAsset(asset);
   return getAssetPresentation(assetId);
+  });
 }
 
 export async function clearAssetCover(assetId) {
-  const manifest = await readAssetManifest();
-  const asset = manifest.assets?.[assetId];
+  return queueCanvasStorage(async()=>{
+  const asset = await readStoredAsset(assetId);
   if (!asset) throw new Error("没有找到对应的文件记录");
   const relativePath = asset.coverRelativePath;
   await removeAssetCoverFile(assetId,relativePath);
   delete asset.coverRelativePath;
-  await writeAssetManifest(manifest);
+  await updateStoredAsset(asset);
   return getAssetPresentation(assetId);
+  });
 }
 
 export async function relinkAsset(assetId, selectedPath) {
-  const manifest = await readAssetManifest();
-  const asset = manifest.assets?.[assetId];
+  return queueCanvasStorage(async()=>{
+  const asset = await readStoredAsset(assetId);
   if (!asset) throw new Error("没有找到对应的文件记录");
   const absolutePath = path.resolve(selectedPath);
   const stat = await fs.stat(absolutePath);
@@ -678,10 +675,18 @@ export async function relinkAsset(assetId, selectedPath) {
   asset.contentHash = contentHash;
   asset.size = stat.size;
   asset.modifiedAt = stat.mtime.toISOString();
-  asset.relativePath = portableAssetPath(absolutePath);
-  asset.absolutePath = asset.relativePath ? null : absolutePath;
+  let finalPath=absolutePath;
+  if(asset.ownerCardId) {
+    const owner=await readCardAttachments(asset.ownerCardId);
+    const directory=await prepareCardDirectory(owner);
+    finalPath=await unusedAttachmentPath(directory,path.basename(absolutePath));
+    await fs.copyFile(absolutePath,finalPath);
+    if(await hashFile(finalPath)!==contentHash)throw new Error('附件复制校验失败');
+  }
+  asset.relativePath = portableAssetPath(finalPath);
+  asset.absolutePath = asset.relativePath ? null : finalPath;
   asset.portable = Boolean(asset.relativePath);
-  asset.displayName = path.basename(absolutePath);
+  asset.displayName = path.basename(finalPath);
   asset.extension = path.extname(absolutePath).toLowerCase();
   asset.category = categoryFor(absolutePath);
   Object.assign(asset, {
@@ -693,19 +698,303 @@ export async function relinkAsset(assetId, selectedPath) {
     ...(await probeMedia(absolutePath, asset.category))
   });
   asset.relinkedAt = new Date().toISOString();
-  await writeAssetManifest(manifest);
-  return { ...asset, absolutePath };
+  await updateStoredAsset(asset);
+  return { ...asset, absolutePath:finalPath };
+  });
 }
 
-async function readBody(req) {
+async function readBody(req, maxBytes = MAX_BODY) {
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > MAX_BODY) throw new Error("数据包过大");
+    if (size > maxBytes) throw new Error("数据包过大");
     chunks.push(chunk);
   }
   return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+}
+
+function attachmentManifestPath(cardId) {
+  canvasDocumentPath(cardId); // Validate IDs before using them in paths.
+  return path.join(VAULT_ROOT,'系统','附件清单',`${cardId}.json`);
+}
+
+function attachmentIndexPath(assetId) {
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(String(assetId))) throw new Error('附件 ID 无效');
+  return path.join(VAULT_ROOT,'系统','附件索引',`${assetId}.json`);
+}
+
+async function writeAtomicJson(target,value) {
+  const temporary=`${target}.${crypto.randomUUID()}.tmp`;
+  try { await writeDurable(temporary,JSON.stringify(value,null,2)); await fs.rename(temporary,target); }
+  finally { await fs.unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;}); }
+}
+
+async function readCardAttachments(cardId) {
+  try { return JSON.parse(await fs.readFile(attachmentManifestPath(cardId),'utf8')); }
+  catch(error) { if(error.code!=='ENOENT')throw error; return {schemaVersion:2,cardId,assets:{},sourceAssets:{},legacyAssets:{}}; }
+}
+
+async function writeCardAttachments(manifest) {
+  manifest.updatedAt=new Date().toISOString();
+  await writeAtomicJson(attachmentManifestPath(manifest.cardId),manifest);
+  // Direct ID lookup; adding an attachment never rewrites a global inventory.
+  for (const id of Object.keys(manifest.assets)) {
+    const target=attachmentIndexPath(id);
+    if (!existsSync(target)) await writeAtomicJson(target,{cardId:manifest.cardId});
+  }
+}
+
+async function readStoredAsset(assetId) {
+  let owner;
+  try { owner=JSON.parse(await fs.readFile(attachmentIndexPath(assetId),'utf8')); }
+  catch(error) { if(error.code!=='ENOENT')throw error; }
+  if(owner) return (await readCardAttachments(owner.cardId)).assets[assetId] || null;
+  if(String(assetId).startsWith('ca_')) return null;
+  return (await readAssetManifest()).assets?.[assetId] || null;
+}
+
+async function updateStoredAsset(asset) {
+  if(asset.ownerCardId) {
+    const manifest=await readCardAttachments(asset.ownerCardId);
+    manifest.assets[asset.id]=asset;
+    await writeCardAttachments(manifest);
+  } else {
+    const manifest=await readAssetManifest();
+    manifest.assets[asset.id]=asset;
+    await writeAssetManifest(manifest);
+  }
+}
+
+function ownedAssetId() { return `ca_${crypto.randomUUID()}`; }
+function storedAssetPath(asset) { return asset.relativePath ? path.join(VAULT_ROOT,asset.relativePath) : asset.absolutePath; }
+
+async function prepareCardDirectory(manifest,cardInfo={}) {
+  const title=String(cardInfo.title || manifest.title || '未命名卡片');
+  // Returning to the inbox retains the previous attachment category.
+  const type=['project','knowledge','source'].includes(cardInfo.type) ? cardInfo.type : manifest.type || 'source';
+  const directory=relativeSlash(path.join('文件',TYPE_DIR[type],`${safeTitle(title)}--${manifest.cardId}`));
+  const target=path.resolve(VAULT_ROOT,directory);
+  const filesRoot=path.join(VAULT_ROOT,'文件')+path.sep;
+  if(!target.startsWith(filesRoot))throw new Error('附件目录无效');
+  if(manifest.directory && manifest.directory!==directory) {
+    const previous=path.resolve(VAULT_ROOT,manifest.directory);
+    if(!previous.startsWith(filesRoot))throw new Error('附件目录无效');
+    if(existsSync(previous)) {
+      await fs.mkdir(path.dirname(target),{recursive:true});
+      if(existsSync(target))throw new Error('卡片附件目标目录已存在，请检查同名目录');
+      await fs.rename(previous,target);
+    }
+    for(const asset of Object.values(manifest.assets)) {
+      if(asset.relativePath?.startsWith(manifest.directory+'/'))asset.relativePath=directory+asset.relativePath.slice(manifest.directory.length);
+    }
+    Object.assign(manifest,{title,type,directory});
+    // Publish relocated paths even if a later attachment fails validation.
+    await writeCardAttachments(manifest);
+  }
+  await fs.mkdir(target,{recursive:true});
+  Object.assign(manifest,{title,type,directory});
+  return target;
+}
+
+async function unusedAttachmentPath(directory,fileName) {
+  const parsed=path.parse(fileName);
+  for(let i=1;;i++) {
+    const target=path.join(directory,`${safeTitle(parsed.name)}${i===1?'':` (${i})`}${parsed.ext.toLowerCase()}`);
+    if(!existsSync(target))return target;
+  }
+}
+
+export async function getCanvasImageDataUrl(assetId) {
+  const asset = await getAsset(assetId);
+  if (asset.category !== "图片") throw new Error("画布只能导入图片资源");
+  const extension = path.extname(asset.absolutePath).toLowerCase();
+  const mime = ({ ".png":"image/png", ".jpg":"image/jpeg", ".jpeg":"image/jpeg", ".gif":"image/gif", ".webp":"image/webp", ".svg":"image/svg+xml", ".avif":"image/avif" })[extension] || "image/png";
+  return `data:${mime};base64,${(await fs.readFile(asset.absolutePath)).toString("base64")}`;
+}
+
+export async function getCanvasMediaDataUrl(assetId) {
+  const asset = await getAsset(assetId);
+  if (asset.category === "图片") return getCanvasImageDataUrl(assetId);
+  const extension = path.extname(asset.absolutePath).toLowerCase();
+  const mime = ({ ".mp4":"video/mp4", ".m4v":"video/mp4", ".webm":"video/webm", ".mov":"video/quicktime", ".ogv":"video/ogg", ".mkv":"video/x-matroska", ".avi":"video/x-msvideo" })[extension] || 'application/octet-stream';
+  return `data:${mime};base64,${(await fs.readFile(asset.absolutePath)).toString("base64")}`;
+}
+
+export async function getCanvasMediaUrl(assetId) {
+  const asset=await getAsset(assetId);
+  await fs.access(asset.absolutePath);
+  return pathToFileURL(asset.absolutePath).href;
+}
+
+function canvasDocumentPath(cardId) {
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(String(cardId))) throw new Error("画布卡片 ID 无效");
+  return path.join(VAULT_ROOT, "系统", "自由画布", `${cardId}.json`);
+}
+
+let canvasStorageQueue = Promise.resolve();
+function queueCanvasStorage(action) {
+  const result = canvasStorageQueue.then(action);
+  canvasStorageQueue = result.catch(() => {});
+  return result;
+}
+
+async function externalizeCanvasAssets(cardId,snapshot,{validateLinkedFiles=false,migration=false}={}) {
+  const manifest=await readCardAttachments(cardId);
+  const linkedAssets={...(snapshot.linkedAssets || {})};
+  const writing=migration || validateLinkedFiles || Object.keys(snapshot.assets || {}).length>0;
+  const directory=writing ? await prepareCardDirectory(manifest,snapshot.cardInfo) : null;
+  const resolved=new Map();
+  const remapped=new Map();
+  const extensions={'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','image/gif':'.gif','image/svg+xml':'.svg','image/avif':'.avif','image/bmp':'.bmp','video/mp4':'.mp4','video/webm':'.webm'};
+  const lookup=async id=>manifest.assets[id] || await readStoredAsset(id);
+  const validate=async asset=>{
+    if(!asset)throw new Error('附件保存失败：没有找到对应的文件记录，请重新插入原文件');
+    const stat=await fs.stat(storedAssetPath(asset)).catch(()=>null);
+    if(!stat?.isFile())throw new Error('附件文件缺失：'+(asset.displayName || asset.originalName)+'。请重新插入原文件后保存');
+    if(stat.size!==asset.size)throw new Error('附件文件大小不符：'+(asset.displayName || asset.originalName)+'。请重新插入原文件后保存');
+  };
+  // Validate unchanged references before copying legacy files or publishing metadata.
+  if(validateLinkedFiles)for(const [sourceId,id] of Object.entries(linkedAssets)) {
+    if(!Object.hasOwn(snapshot.assets,sourceId))await validate(await lookup(manifest.legacyAssets[id] || id));
+  }
+  const own=async id=>{
+    if(remapped.has(id))return remapped.get(id);
+    let asset=await lookup(manifest.legacyAssets[id] || id);
+    if(writing && asset && asset.ownerCardId!==cardId) {
+      const sourceStat=await fs.stat(storedAssetPath(asset)).catch(()=>null);
+      const missing=!sourceStat?.isFile() || sourceStat.size!==asset.size;
+      if(!migration || !missing)await validate(asset);
+      const target=await unusedAttachmentPath(directory,asset.originalName || asset.displayName);
+      let hash=asset.contentHash;
+      if(!missing) {
+        await fs.copyFile(storedAssetPath(asset),target);
+        hash=await hashFile(target);
+        if(asset.contentHash && hash!==asset.contentHash)throw new Error('旧附件复制校验失败');
+      }
+      asset={...asset,id:ownedAssetId(),ownerCardId:cardId,displayName:path.basename(target),relativePath:portableAssetPath(target),absolutePath:null,storageMode:'copy',portable:true,contentHash:hash};
+      manifest.assets[asset.id]=asset;
+      manifest.legacyAssets[id]=asset.id;
+    }
+    if(asset)resolved.set(asset.id,asset);
+    remapped.set(id,asset?.id || id);
+    return asset?.id || id;
+  };
+  for(const [sourceId,dataUrl] of Object.entries(snapshot.assets || {})) {
+    const match=/^data:([\w.+-]+\/[\w.+-]+);base64,([A-Za-z0-9+/=]*)$/.exec(dataUrl);
+    if(!match)throw new Error('画布资源格式无效');
+    const bytes=Buffer.from(match[2],'base64');
+    const contentHash=crypto.createHash('sha256').update(bytes).digest('hex');
+    const previousId=linkedAssets[sourceId] || manifest.sourceAssets[sourceId];
+    let asset=previousId ? await lookup(manifest.legacyAssets[previousId] || previousId) : null;
+    if(asset?.ownerCardId!==cardId || asset.contentHash!==contentHash || asset.size!==bytes.length)asset=null;
+    const metadata=snapshot.assetMetadata?.[sourceId] || {};
+    const originalName=typeof metadata.name==='string' ? path.basename(metadata.name).slice(0,180) : '';
+    const extension=path.extname(originalName).toLowerCase() || extensions[match[1]] || '.bin';
+    const category=match[1].startsWith('image/') ? '图片' : match[1].startsWith('video/') ? '视频' : match[1].startsWith('audio/') ? '音频' : categoryFor(originalName);
+    const stat=asset ? await fs.stat(storedAssetPath(asset)).catch(()=>null) : null;
+    if(!asset || !stat?.isFile() || stat.size!==bytes.length) {
+      const target=asset ? storedAssetPath(asset) : await unusedAttachmentPath(directory,originalName || '画布'+category+'-'+contentHash.slice(0,12)+extension);
+      // A changed file is preserved. Explicit restoration only fills a missing original.
+      if(stat?.isFile()) { asset=null; }
+      const destination=stat?.isFile() ? await unusedAttachmentPath(directory,originalName || path.basename(target)) : target;
+      await writeDurable(destination,bytes);
+      if(await hashFile(destination)!==contentHash)throw new Error('画布文件保存校验失败');
+      const savedStat=await fs.stat(destination);
+      const media=await probeMedia(destination,category);
+      asset={id:asset?.id || ownedAssetId(),ownerCardId:cardId,originalName:originalName || path.basename(destination),displayName:path.basename(destination),extension,category,size:bytes.length,contentHash,storageMode:'copy',portable:true,relativePath:portableAssetPath(destination),absolutePath:null,importedAt:new Date().toISOString(),modifiedAt:savedStat.mtime.toISOString(),...media};
+      for(const key of ['width','height','durationSeconds'])if(!asset[key] && Number.isFinite(metadata[key]) && metadata[key]>0)asset[key]=metadata[key];
+      manifest.assets[asset.id]=asset;
+    }
+    linkedAssets[sourceId]=asset.id;
+    resolved.set(asset.id,asset);
+    if(previousId)remapped.set(previousId,asset.id);
+  }
+  for(const [sourceId,id] of Object.entries(linkedAssets))linkedAssets[sourceId]=await own(id);
+  const primaryAssetId=snapshot.primaryAssetId ? await own(snapshot.primaryAssetId) : null;
+  const assetIds=[...new Set([...Object.values(linkedAssets),...(primaryAssetId ? [primaryAssetId] : [])])];
+  if(validateLinkedFiles)for(const id of assetIds)await validate(resolved.get(id) || await lookup(id));
+  if(writing) {
+    Object.assign(manifest.sourceAssets,linkedAssets);
+    await writeCardAttachments(manifest);
+  }
+  const attachments=await Promise.all(assetIds.map(async id=>{
+    const asset=resolved.get(id) || await lookup(id);
+    if(!asset)return null;
+    const stat=await fs.stat(storedAssetPath(asset)).catch(()=>null);
+    return {id:asset.id,name:asset.displayName || asset.originalName,category:asset.category,extension:asset.extension,size:asset.size,width:asset.width,height:asset.height,durationSeconds:asset.durationSeconds,relativePath:asset.relativePath,...(!stat?.isFile() || stat.size!==asset.size ? {missing:true} : {})};
+  }));
+  const requestedCover=snapshot.coverSourceId ? linkedAssets[snapshot.coverSourceId] : remapped.get(snapshot.coverAssetId) || snapshot.coverAssetId;
+  const present=attachments.filter(Boolean);
+  const coverAssetId=present.some(asset=>asset.id===requestedCover && ['图片','视频'].includes(asset.category)) ? requestedCover : null;
+  return {update:snapshot.update,assets:{},linkedAssets,...(snapshot.fileCardLayoutVersion===1 ? {fileCardLayoutVersion:1} : {}),...(primaryAssetId ? {primaryAssetId} : {}),coverAssetId,attachments:present};
+}
+
+async function writeCanvasSnapshot(cardId,snapshot) {
+  const target = canvasDocumentPath(cardId);
+  const temporary = `${target}.${crypto.randomUUID()}.tmp`;
+  try { await writeDurable(temporary,JSON.stringify(snapshot)); await fs.rename(temporary,target); }
+  finally { await fs.unlink(temporary).catch(error => { if(error.code !== 'ENOENT') throw error; }); }
+}
+
+export async function loadCanvasDocument(cardId) {
+  return queueCanvasStorage(async () => {
+  try {
+    const snapshot = JSON.parse(await fs.readFile(canvasDocumentPath(cardId), "utf8"));
+    if (Object.keys(snapshot.assets || {}).length) {
+      const normalized = await externalizeCanvasAssets(cardId,snapshot);
+      const backupDir = path.join(VAULT_ROOT,'系统','迁移备份','画布附件');
+      await fs.mkdir(backupDir,{recursive:true});
+      const backup = path.join(backupDir,`${cardId}.json`);
+      try { await fs.access(backup); } catch { await writeDurable(backup,JSON.stringify(snapshot)); }
+      await writeCanvasSnapshot(cardId,normalized);
+      return normalized;
+    }
+    return externalizeCanvasAssets(cardId,snapshot);
+  }
+  catch (error) { if (error.code === "ENOENT") return null; throw error; }
+  });
+}
+
+export async function saveCanvasDocument(cardId, snapshot) {
+  if (!snapshot || typeof snapshot.update !== "string" || !/^[A-Za-z0-9+/=]+$/.test(snapshot.update) ||
+    !snapshot.assets || typeof snapshot.assets !== "object" || Array.isArray(snapshot.assets)) throw new Error("画布数据无效");
+  for (const value of Object.values(snapshot.assets)) {
+    if (typeof value !== "string" || !/^data:[\w.+-]+\/[\w.+-]+;base64,[A-Za-z0-9+/=]*$/.test(value)) throw new Error("画布资源格式无效");
+  }
+  const linkedAssets = snapshot.linkedAssets || {};
+  if (!linkedAssets || typeof linkedAssets !== "object" || Array.isArray(linkedAssets) ||
+      Object.entries(linkedAssets).some(([sourceId, assetId]) => !sourceId || !/^[a-zA-Z0-9_-]{1,128}$/.test(String(assetId)))) throw new Error("画布关联资源无效");
+  if (snapshot.primaryAssetId && !/^[a-zA-Z0-9_-]{1,128}$/.test(snapshot.primaryAssetId)) throw new Error("画布关联资源无效");
+  if (snapshot.coverAssetId && !/^[a-zA-Z0-9_-]{1,128}$/.test(snapshot.coverAssetId)) throw new Error('封面资源无效');
+  if (snapshot.coverSourceId && !Object.hasOwn(snapshot.assets,snapshot.coverSourceId)) throw new Error('封面资源无效');
+  canvasDocumentPath(cardId);
+  return queueCanvasStorage(async () => {
+    await ensureVault();
+    const normalized = await externalizeCanvasAssets(cardId,snapshot,{validateLinkedFiles:true});
+    await writeCanvasSnapshot(cardId,normalized);
+    return { saved:true, cardId, attachments:normalized.attachments,snapshot:normalized };
+  });
+}
+
+// Offline migration preserves missing originals as missing records; normal saves
+// remain strict and never restore bytes from a preview cache.
+export async function migrateCanvasAttachments(cardId,cardInfo) {
+  return queueCanvasStorage(async()=>{
+    const target=canvasDocumentPath(cardId);
+    const snapshot=JSON.parse(await fs.readFile(target,'utf8'));
+    const normalized=await externalizeCanvasAssets(cardId,{...snapshot,cardInfo},{migration:true});
+    await writeCanvasSnapshot(cardId,normalized);
+    return normalized;
+  });
+}
+
+export async function migrateCardAssetReferences(cardId,cardInfo,assetIds) {
+  return queueCanvasStorage(async()=>{
+    const snapshot={update:'',assets:{},linkedAssets:Object.fromEntries(assetIds.map(id=>[id,id])),cardInfo};
+    const normalized=await externalizeCanvasAssets(cardId,snapshot,{migration:true});
+    return {assetIds:normalized.linkedAssets,attachments:normalized.attachments};
+  });
 }
 
 async function serveStatic(urlPath, res) {
@@ -731,6 +1020,28 @@ export function createServer() {
       return sendJson(res, 200, await vaultStatus());
     }
     if (url.pathname === "/api/vault/sync-cards" && req.method === "POST") return sendJson(res, 200, await syncCards(await readBody(req)));
+    const canvasRoute = url.pathname.match(/^\/api\/canvas\/([a-zA-Z0-9_-]{1,128})$/);
+    const canvasMediaRoute = url.pathname.match(/^\/api\/canvas-media\/([a-zA-Z0-9_-]{1,128})$/);
+    const canvasFileRoute=url.pathname.match(/^\/api\/canvas-file\/([a-zA-Z0-9_-]{1,128})$/);
+    if(canvasFileRoute&&req.method==='GET'){
+      const asset=await getAsset(canvasFileRoute[1]);const stat=await fs.stat(asset.absolutePath);
+      if(!stat.isFile()||stat.size!==asset.size)throw new Error('附件原文件缺失或大小不符');
+      const mime=MIME[path.extname(asset.absolutePath)]||({'图片':asset.extension==='.jpg'?'image/jpeg':'image/png','视频':asset.extension==='.webm'?'video/webm':'video/mp4','音频':asset.extension==='.wav'?'audio/wav':'audio/mpeg'})[asset.category]||'application/octet-stream';
+      res.writeHead(200,{'Content-Type':mime,'Content-Length':stat.size,'Cache-Control':'no-store'});createReadStream(asset.absolutePath).on('error',()=>res.destroy()).pipe(res);return;
+    }
+    const assetPreviewRoute = url.pathname.match(/^\/api\/assets\/([a-zA-Z0-9_-]{1,128})\/preview$/);
+    if (assetPreviewRoute && req.method === 'GET') {
+      const presentation = await getAssetPresentation(assetPreviewRoute[1]);
+      if (!presentation.previewUrl) return sendJson(res,404,{error:'暂无预览'});
+      const previewPath = fileURLToPath(presentation.previewUrl);
+      const mime = path.extname(previewPath).toLowerCase() === '.svg' ? 'image/svg+xml' : ({'.png':'image/png','.webp':'image/webp','.gif':'image/gif','.avif':'image/avif'})[path.extname(previewPath).toLowerCase()] || 'image/jpeg';
+      res.writeHead(200,{'Content-Type':mime,'Cache-Control':'private, max-age=300'});
+      createReadStream(previewPath).pipe(res);
+      return;
+    }
+    if (canvasMediaRoute && req.method === "GET") return sendJson(res, 200, {dataUrl:await getCanvasMediaDataUrl(canvasMediaRoute[1])});
+    if (canvasRoute && req.method === "GET") return sendJson(res, 200, { snapshot:await loadCanvasDocument(canvasRoute[1]) });
+    if (canvasRoute && req.method === "POST") return sendJson(res, 200, await saveCanvasDocument(canvasRoute[1], await readBody(req, MAX_CANVAS_BODY)));
     if (url.pathname.startsWith("/api/")) return sendJson(res, 404, { error: "Unknown API" });
     await serveStatic(url.pathname, res);
   } catch (error) {

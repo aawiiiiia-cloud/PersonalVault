@@ -1,0 +1,41 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>知行台 · 局部设计微调</title><link rel="stylesheet" href="../assets/fonts/fonts.css"><link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="refined.css"><script src="refined.js" defer></script></head><body data-refinement="on" data-lettering="on"><div class="app-shell"><aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">知</div>
+        <div><strong>知行台</strong><span>方法论驱动的知识工作台</span></div>
+      </div>
+
+      <button class="capture-button" id="quickCapture">＋ 新建随手记</button>
+      <button class="asset-import-button" id="openAssetImport">＋ 导入文件</button>
+
+      <nav id="mainNav" aria-label="主导航">
+        <button class="nav-item" data-view="home"><span>⌂</span>工作台</button>
+        <button class="nav-item" data-view="inbox"><span>⌁</span>随手记 <em id="inboxCount">0</em></button>
+
+        <button class="nav-item" data-view="areas"><span>◎</span>领域</button>
+        <div id="areaNavList" class="area-nav-list"><button data-area="AI 工具与自动化">AI 工具与自动化</button><button data-area="创意与设计">创意与设计</button></div>
+
+        <p class="nav-subsection-label">查看</p>
+        <button class="nav-item" data-view="graph"><span>⌘</span>关系图谱</button>
+
+        <p class="nav-subsection-label">全部内容</p>
+        <button class="nav-item sub active" data-view="projects" aria-label="项目"><span>◇</span><svg class="nav-lettering" viewBox="0 0 210 100" aria-hidden="true"><use href="nav-lettering.svg#xiang" width="100" height="100"/><use href="nav-lettering.svg#mu" x="110" width="100" height="100"/></svg><span class="nav-copy">项目</span></button>
+        <button class="nav-item sub" data-view="knowledge" aria-label="知识"><span>✦</span><svg class="nav-lettering" viewBox="0 0 210 100" aria-hidden="true"><use href="nav-lettering.svg#zhi" width="100" height="100"/><use href="nav-lettering.svg#shi" x="110" width="100" height="100"/></svg><span class="nav-copy">知识</span></button>
+        <button class="nav-item sub" data-view="sources" aria-label="资料"><span>▤</span><svg class="nav-lettering" viewBox="0 0 210 100" aria-hidden="true"><use href="nav-lettering.svg#zi" width="100" height="100"/><use href="nav-lettering.svg#liao" x="110" width="100" height="100"/></svg><span class="nav-copy">资料</span></button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="nav-item nav-item-system" data-view="trash"><span>♲</span>回收站 <em id="trashCount">0</em></button>
+        <button id="openDataManager">数据管理</button>
+        <button id="resetDemo">重置演示数据</button>
+      </div>
+    </aside><main><header class="topbar">
+        <div>
+          <p class="eyebrow" id="viewEyebrow">2026 · 个人知识系统</p>
+          <h1 id="viewTitle">今天，把经历变成方法</h1>
+        </div>
+        <div class="search-wrap">
+          <input id="searchInput" type="search" placeholder="搜索项目、知识与资料…">
+          <button id="clearSearch" class="clear-search hidden" type="button" aria-label="退出搜索">×</button>
+          <kbd>Ctrl K</kbd>
+        </div>
+      </header><section class="view active"><div class="collection-toolbar"><div class="collection-filters"><div class="filter-row" id="filterRow"></div><label class="collection-area-filter"><span>按领域查看</span><select id="domain"><option value="all">全部领域</option><option>AI 工具与自动化</option><option>创意与设计</option></select></label></div><div class="collection-actions"><div class="display-toggle" role="group" aria-label="内容呈现方式"><button data-display="gallery">画廊</button><button data-display="list" class="active">列表</button></div><button class="primary-small" id="newCard">＋ 新建项目</button></div></div><div class="stats-row" id="stats"></div><div class="collection-list" id="collectionList"></div></section></main></div><div class="refine-controls" aria-label="设计对比"><span class="control-dot"></span><span>局部微调提案</span><div class="mode"><button data-mode="off" aria-pressed="false">原版</button><button data-mode="on" aria-pressed="true">微调</button></div><label><input id="lettering" type="checkbox" checked>SVG 字形</label></div><dialog class="refined-dialog" id="preview"><header><span class="entry-type" id="previewType"></span><button id="closePreview" aria-label="关闭">×</button></header><h2 id="previewTitle"></h2><span class="type-chip--area" style="display:inline-block;padding:4px 12px;border:1px solid;border-radius:999px;font-size:11px" id="previewArea"></span><div class="preview-canvas"><div class="preview-note"><strong>原始内容</strong><p id="previewBody"></p></div></div><footer>视觉演示 · 正式工作台的数据不受影响</footer></dialog><div class="demo-toast" id="toast" hidden></div></body></html>

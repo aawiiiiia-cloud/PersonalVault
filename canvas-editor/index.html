@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BlockSuite 画布原型 · 个人知识工作台</title>
+    <script src="../theme.js"></script>
+    <style>html,body{background:#fafbfd}html[data-theme="dark"],html[data-theme="dark"] body{background:#1b1d25}</style>
+    <script>
+      // Set embedded mode before the module bundle loads, so read-only cards
+      // never paint the standalone header or edit toolbar during startup.
+      const canvasMode = new URLSearchParams(location.search).get('embedded');
+      if (canvasMode) document.documentElement.classList.add(
+        'embedded-canvas', canvasMode === 'view' ? 'embedded-canvas-view' : 'embedded-canvas-edit'
+      );
+    </script>
+    <script type="module" crossorigin src="./assets/canvas-C2L9eEdg.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/preview-groups-C0qdTTRE.js">
+    <link rel="modulepreload" crossorigin href="./assets/_commonjsHelpers-Cpj98o6Y.js">
+    <link rel="stylesheet" crossorigin href="./assets/canvas-DNusZcZO.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div><strong>个人工作台 · 自由画布原型</strong><small>双击空白处添加快速注释 · 拖出富文本框大小 · 拖动空白处框选 · 空格加拖动移动画布 · 滚轮缩放 · Del 删除选中 · Ctrl+Z 撤销</small></div>
+      <div class="actions">
+          <span id="status" role="status">正在启动…</span>
+        <button id="inspect-notes" type="button" title="开始记录操作并列出每个文本框的真实内容">诊断记录</button>
+        <button id="copy-record" type="button" title="把记录复制到剪贴板，便于粘贴给他人分析">复制记录</button>
+        <button id="choose-media" type="button">插入附件</button>
+        <input id="media-file" type="file" multiple hidden />
+      </div>
+    </header>
+    <pre id="note-report" hidden></pre>
+    <textarea id="record-fallback" hidden readonly aria-label="操作记录文本"></textarea>
+    <main id="canvas"></main>
+    <nav class="canvas-tools" aria-label="画布工具">
+      <button type="button" data-tool="pan" class="active" aria-pressed="true" title="移动视图；也可按住空格拖动"><img src="./assets/icons/Move.svg" alt="" />移动</button>
+      <button type="button" data-tool="select" aria-pressed="false"><img src="./assets/icons/Select.svg" alt="" />选择</button>
+      <button type="button" data-tool="note" aria-pressed="false" title="富文本框：拖动创建">
+        <span class="note-art-frame" aria-hidden="true"><span class="note-root" data-app-theme="light" style="--paper-bg:#fff">
+          <span class="paper"></span>
+          <span class="edgeless-toolbar-note-icon link"><img src="./assets/icons/Link.svg" alt="" /></span>
+          <span class="edgeless-toolbar-note-icon heading"><img src="./assets/icons/Heading1.svg" alt="" /></span>
+          <span class="edgeless-toolbar-note-icon text"><img src="./assets/icons/Text.svg" alt="" /></span>
+        </span></span><span>富文本框</span>
+      </button>
+      <button type="button" id="create-table" title="新建表格卡片"><img src="./assets/icons/Table.svg" alt="" />表格</button>
+      <button type="button" data-tool="connector" aria-pressed="false"><img src="./assets/icons/ConnectorC.svg" alt="" />曲线</button>
+      <button type="button" data-tool="brush" aria-pressed="false"><span class="preset-art"><img src="./assets/icons/EdgelessPenLightIcon.svg" alt="" /></span><span>画笔</span></button>
+      <button type="button" data-tool="eraser" aria-pressed="false"><span class="preset-art"><img src="./assets/icons/EdgelessEraserLightIcon.svg" alt="" /></span><span>橡皮擦</span></button>
+      <button type="button" id="delete-selected" disabled><img src="./assets/icons/Delete.svg" alt="" />删除选中</button>
+    </nav>
+  </body>
+</html>

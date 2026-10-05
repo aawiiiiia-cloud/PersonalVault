@@ -1,0 +1,30 @@
+{
+  "name": "personalvault-blocksuite-prototype",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@blocksuite/blocks": "0.19.5",
+    "@blocksuite/presets": "0.19.5",
+    "@blocksuite/store": "0.19.5",
+    "@blocksuite/sync": "0.19.5",
+    "@toeverything/theme": "1.1.23",
+    "ag-psd": "^31.0.2",
+    "epubjs": "^0.3.93",
+    "lit": "3.3.3",
+    "papaparse": "^5.7.0",
+    "pdfjs-dist": "^6.3.289",
+    "three": "^0.186.1",
+    "y-indexeddb": "^9.0.12",
+    "yjs": "13.6.33",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "vite": "^6.3.0"
+  }
+}

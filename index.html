@@ -263,8 +263,8 @@
 
       <section class="data-section vault-section">
         <div class="data-section-head"><div><b>移动硬盘知识库</b><p id="vaultPathLabel">正在检查 E:\PersonalVault…</p></div><span id="vaultStatusBadge" class="vault-badge checking">检查中</span></div>
-        <p class="vault-explanation">写入后，每张卡片会成为移动硬盘中的独立 Markdown 文件；现阶段仍保留浏览器副本，便于核对迁移结果。</p>
-        <div class="vault-actions"><button type="button" class="outline-small" id="refreshVaultStatus">重新检查</button><button type="button" class="primary" id="syncCardsToVault">把当前卡片写入移动硬盘</button></div>
+        <p class="vault-explanation">已保存资料以硬盘上的卡片、画布和附件为准。本机缓存不会自动覆盖硬盘数据；重建只恢复汇总与索引，不会恢复缺失原文件。</p>
+        <div class="vault-actions"><button type="button" class="outline-small" id="refreshVaultStatus">重新检查</button><button type="button" class="primary" id="syncCardsToVault">把当前卡片写入移动硬盘</button><button type="button" class="outline-small" id="reloadVault">重新载入资料库</button><button type="button" class="outline-small" id="rebuildVault">从卡片重建数据目录</button></div>
         <div id="vaultResult" class="data-health-report"></div>
       </section>
 
@@ -339,6 +339,7 @@
   <script src="card-v2.js"></script>
   <script src="card-markdown.js"></script>
   <script src="data-layer.js"></script>
+  <script src="vault-session.js"></script>
   <script src="content-relations.js"></script>
   <script src="dialog-resize.js"></script>
   <script src="media-lifecycle.js"></script>
@@ -352,6 +353,7 @@
   <script src="cover-ui.js" defer></script>
   <script src="sidebar-resize.js"></script>
   <script src="graph-resize.js"></script>
+  <script src="home-view.js"></script>
   <script src="app.js"></script>
   <script src="attachment-cache.js"></script>
   <script src="activity-tooltip.js"></script>

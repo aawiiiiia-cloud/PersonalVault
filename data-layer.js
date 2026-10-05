@@ -37,7 +37,7 @@
 
   function normalizeEntry(entry = {}) {
     const source = CardV2?.MAIN_TYPES.has(entry.type) ? CardV2.migrateEntry(entry) : entry;
-    const createdAt = toIso(source.createdAt || source.created);
+    const createdAt = toIso(source.createdAt || source.created,source.id ? "1970-01-01T00:00:00.000Z" : isoNow());
     const updatedAt = toIso(source.updatedAt || source.updated, createdAt);
     const normalized = {
       ...source,
@@ -161,7 +161,7 @@
       errors: [...rawReport.errors, ...normalizedReport.errors.filter(message => !rawReport.errors.includes(message))],
       warnings: [...rawReport.warnings, ...normalizedReport.warnings.filter(message => !rawReport.warnings.includes(message))]
     };
-    return { state, report, sourceFormat: parsed.format || "legacy-json" };
+    return { state, report, canvasDocuments:parsed.canvasDocuments || {}, changedIds:parsed.changedIds, sourceFormat: parsed.format || "legacy-json" };
   }
 
   function download(name, content, type) {

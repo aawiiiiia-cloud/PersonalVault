@@ -228,11 +228,10 @@ try {
 
   const unknownPath = path.join(vaultPath,"卡片","随手记","未登记测试--unknown-card.md");
   await fs.writeFile(unknownPath,'---\nid: "unknown-card"\ntype: "capture"\ntitle: "未登记测试"\ndeletedAt: null\n---\n\n# 未登记测试\n','utf8');
-  const unknownResult = await vault.syncCards({ schemaVersion:1, cards:raceC, tombstones });
-  assert.ok(unknownResult.integrity.unknownMarkdown.some(item => item.endsWith("未登记测试--unknown-card.md")));
+  await assert.rejects(vault.syncCards({schemaVersion:1,cards:raceC,tombstones}),/没有永久删除记录/,'new card originals cannot be silently removed by an old snapshot');
   await fs.rm(path.join(vaultPath,"系统","latest-state.json"));
   await vault.rebuildIndex();
-  assert.equal((await vault.querySearchIndex({ query:"未登记测试", includeDeleted:true })).count,0);
+  assert.equal((await vault.querySearchIndex({ query:"未登记测试", includeDeleted:true })).count,1);
   await fs.rm(unknownPath);
   await vault.syncCards({ schemaVersion:1, cards:raceC, tombstones });
 

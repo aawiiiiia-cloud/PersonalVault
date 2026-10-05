@@ -5,6 +5,7 @@ import { cp, copyFile, mkdir, readFile, readdir, stat, writeFile } from "node:fs
 import path from "node:path";
 import { searchIndexStatus } from "../search-index.mjs";
 import { semanticIndexStatus } from "../semantic-index.mjs";
+import {readCardFiles} from '../vault-cards.mjs';
 
 const require=createRequire(import.meta.url);
 globalThis.window={};
@@ -33,7 +34,9 @@ async function markdownPaths(root,relative=""){
   return result.sort();
 }
 async function readJson(file){return JSON.parse(await readFile(file,"utf8"));}
-const oldState=await readJson(statePath);
+const originalDisk=await readCardFiles(vaultRoot);
+if(!originalDisk.found) throw new Error('未找到原始卡片目录，请先检查资料库');
+const oldState=originalDisk.state;
 const oldManifest=await readJson(manifestPath);
 const oldCards=oldState.entries || oldState.cards;
 if(!Array.isArray(oldCards)) throw new Error("latest-state.json 不含卡片列表");
@@ -102,10 +105,10 @@ await writeFile(path.join(snapshot,"snapshot-report.json"),JSON.stringify({creat
 next.updatedAt=new Date().toISOString();
 process.env.PERSONAL_VAULT_PATH=vaultRoot;
 const vault=await import("../server.mjs?v2migration="+Date.now());
-const syncResult=await vault.syncCards(Data.createBundle(next));
+const syncResult=await vault.syncCards({...Data.createBundle(next),baseRevision:originalDisk.revision,requireRevision:true});
 const restored=(await vault.loadLatestState()).state;
 assert.equal(restored.schemaVersion,2);
-assert.deepEqual(restored.entries.map(card=>card.id),oldIds);
+assert.deepEqual(restored.entries.map(card=>card.id).sort(),[...oldIds].sort());
 const currentManifest=await readJson(manifestPath);
 assert.equal(Object.keys(currentManifest.cards).length,oldCards.length);
 for(const card of restored.entries){

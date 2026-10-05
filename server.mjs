@@ -6,6 +6,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { rebuildSearchIndex, searchIndex, searchIndexStatus } from "./search-index.mjs";
+import {atomicWrite, readCardFiles, assertRevision, digest} from './vault-cards.mjs';
 import {
   rebuildSemanticIndex,
   semanticSearch,
@@ -20,7 +21,7 @@ const PORT = Number(process.env.WORKBENCH_PORT || 4173);
 const HOST = "127.0.0.1";
 function detectVaultRoot() {
   if (process.env.PERSONAL_VAULT_PATH) return path.resolve(process.env.PERSONAL_VAULT_PATH);
-  const candidates = [];
+  const candidates = [path.join(APP_ROOT, 'PersonalVault')];
   if (process.platform === "win32") {
     const letters = ["E", ..."DEFGHIJKLMNOPQRSTUVWXYZ"].filter((letter, index, all) => all.indexOf(letter) === index);
     letters.forEach(letter => candidates.push(`${letter}:\\PersonalVault`));
@@ -34,7 +35,6 @@ function detectVaultRoot() {
         });
     } catch {}
   }
-  candidates.push(path.join(APP_ROOT, "PersonalVault"));
   const found = candidates.find(candidate => existsSync(path.join(candidate, "vault.json")));
   if (found) return path.resolve(found);
   return path.resolve(process.platform === "win32" ? "E:\\PersonalVault" : "/Volumes/PersonalVault");
@@ -139,8 +139,9 @@ async function readTombstones() {
   try {
     const stored = JSON.parse(await fs.readFile(path.join(VAULT_ROOT, "系统", "tombstones.json"), "utf8"));
     return normalizeTombstones(stored?.tombstones);
-  } catch {
-    return [];
+  } catch (error) {
+    if(error.code === 'ENOENT') return [];
+    throw new Error('永久删除记录无法读取，已停止保存：'+error.message);
   }
 }
 
@@ -227,14 +228,7 @@ export async function ensureVault() {
 }
 
 async function writeDurable(target, content) {
-  await fs.mkdir(path.dirname(target), { recursive: true });
-  const handle = await fs.open(target, "w");
-  try {
-    await handle.writeFile(content, "utf8");
-    await handle.sync();
-  } finally {
-    await handle.close();
-  }
+  return atomicWrite(target,content);
 }
 
 export async function vaultStatus() {
@@ -261,20 +255,29 @@ export function syncCards(payload) {
 }
 
 async function syncCardsOnce(payload) {
-  const cards = payload?.cards || payload?.entries || payload?.state?.entries;
+  let cards = payload?.cards || payload?.entries || payload?.state?.entries;
   if (!Array.isArray(cards)) throw new Error("没有找到卡片数据");
+  const disk = await readCardFiles(VAULT_ROOT);
+  let changedScope=null;
+  if(Object.hasOwn(payload,'changedIds')) {
+    if(!Array.isArray(payload.changedIds)||payload.changedIds.some(id=>typeof id!=='string'||!/^[a-zA-Z0-9_-]{1,128}$/.test(id)))throw new Error('修改卡片列表无效');
+    const changed=new Set(payload.changedIds);
+    changedScope=changed;
+    const select=revision=>({...revision,cards:Object.fromEntries(Object.entries(revision?.cards || {}).filter(([id])=>changed.has(id)))});
+    assertRevision(payload.baseRevision&&select(payload.baseRevision),select(disk.revision));
+    // Only edited cards come from the client. Unedited cards and newly added
+    // disk cards remain the disk version, so independent windows can coexist.
+    cards=[...disk.state.entries.filter(card=>!changed.has(card.id)),...cards.filter(card=>changed.has(card.id))];
+  } else if(payload.requireRevision || payload.baseRevision) assertRevision(payload.baseRevision,disk.revision);
   await ensureVault();
 
   const manifestPath = path.join(VAULT_ROOT, "系统", "cards-manifest.json");
-  let previous = { cards: {} };
-  try { previous = JSON.parse(await fs.readFile(manifestPath, "utf8")); } catch {}
+  const previous = {cards:Object.fromEntries(disk.files.map(item=>[item.card.id,{path:item.relativePath,hash:item.hash,title:item.card.title,type:item.card.type}]))};
 
   const persistedTombstones = await readTombstones();
   const tombstones = normalizeTombstones([...persistedTombstones, ...(payload?.tombstones || payload?.state?.tombstones || [])]);
   const tombstoneById = new Map(tombstones.map(item => [item.id,item]));
-  let previousState = { entries:[] };
-  try { previousState = JSON.parse(await fs.readFile(path.join(VAULT_ROOT,"系统","latest-state.json"),"utf8")); } catch {}
-  const previousEntries = new Map((previousState.entries || previousState.cards || []).map(card => [card.id,card]));
+  const previousEntries = new Map(disk.state.entries.map(card => [card.id,card]));
   const persistedTombstoneIds = new Set(persistedTombstones.map(item => item.id));
   const invalidPermanentDeletes = tombstones.filter(item => {
     if (persistedTombstoneIds.has(item.id)) return false;
@@ -288,9 +291,11 @@ async function syncCardsOnce(payload) {
   }
   const cardIds = new Set();
   cards.forEach(card => {
-    if (!card?.id || !card?.type || !card?.title) throw new Error("存在缺少ID、类型或标题的卡片，已经停止写入");
+    if (typeof card?.id!=='string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(card.id) || typeof card?.title!=='string' || !card.title.trim() || !card.type) throw new Error("存在缺少有效ID、类型或标题的卡片，已经停止写入");
     if (cardIds.has(card.id)) throw new Error(`存在重复卡片ID：${card.id}`);
     if (tombstoneById.has(card.id)) throw new Error(`卡片 ${card.id} 已被永久删除，不能重新同步`);
+    if (!TYPE_DIR[card.type]) throw new Error(`无法识别卡片类型：${card.type}`);
+    if (Number(card.structureVersion || 1)>2) throw new Error('卡片使用更新的数据版本，请升级应用后保存');
     cardIds.add(card.id);
   });
   const unexplainedRemovals = Object.keys(previous.cards || {}).filter(id => !cardIds.has(id) && !tombstoneById.has(id));
@@ -299,12 +304,32 @@ async function syncCardsOnce(payload) {
     throw new Error(`有 ${unexplainedRemovals.length} 张卡片从状态中消失，但没有永久删除记录；已停止同步`);
   }
 
-  const next = { schemaVersion: payload.schemaVersion || 1, updatedAt: new Date().toISOString(), cards: {} };
+  const canvasDocuments={};
+  const pendingCanvas=Object.entries(payload.canvasDocuments || {});
+  if(pendingCanvas.length>1) throw new Error('一次卡片保存只能提交一个画布');
+  for(const [id,snapshot] of pendingCanvas) {
+    const card=cards.find(card=>card.id===id);
+    if(!card) throw new Error('画布没有对应卡片');
+    const result=await saveCanvasDocument(id,{...snapshot,cardInfo:{title:card.title,type:card.type},requireRevision:true});
+    canvasDocuments[id]=result.snapshot;
+    card.canvasVersion=1;
+    if(typeof snapshot.text==='string')card.content=snapshot.text;
+    if(card.assetId) {
+      const primary=result.snapshot.attachments.find(asset=>asset.id===result.snapshot.primaryAssetId);
+      Object.assign(card,{assetId:primary?.id || null,assetPath:primary?.relativePath || '',assetPortable:Boolean(primary?.relativePath),fileName:primary?.name || '',assetCategory:primary?.category || '',fileExtension:primary?.extension || '',fileSize:primary?.size || 0,mediaWidth:primary?.width || null,mediaHeight:primary?.height || null,durationSeconds:primary?.durationSeconds || null});
+    }
+  }
+
+  const next = { schemaVersion: payload.schemaVersion || 1, updatedAt: new Date().toISOString(), cards: Object.create(null) };
   const written = [];
   const changes = [];
   const beforeFiles = await markdownInventory();
   for (const card of cards) {
     const previousInfo=previous.cards?.[card.id];
+    if(changedScope&&!changedScope.has(card.id)&&previousInfo) {
+      next.cards[card.id]={...previousInfo,updatedAt:card.updatedAt || card.updated || null};
+      continue;
+    }
     if(/^[a-zA-Z0-9_-]{1,128}$/.test(String(card.id)) && (previousInfo?.title!==card.title || previousInfo?.type!==card.type))await queueCanvasStorage(async()=>{
       const attachments=await readCardAttachments(card.id);
       if(attachments.directory) {
@@ -320,9 +345,11 @@ async function syncCardsOnce(payload) {
     const absolutePath = path.join(VAULT_ROOT, relativePath);
     const markdown = cardMarkdown(card);
     const hash = crypto.createHash("sha256").update(markdown).digest("hex");
-    await writeDurable(absolutePath, markdown);
+    if(previousInfo?.hash !== hash || previousInfo?.path !== relativeSlash(relativePath)) {
+      await writeDurable(absolutePath, markdown);
+      written.push(relativeSlash(relativePath));
+    }
     next.cards[card.id] = { path: relativeSlash(relativePath), hash, title: card.title, type: card.type, updatedAt: card.updatedAt || card.updated || null };
-    written.push(relativeSlash(relativePath));
 
     const oldRelative = previous.cards?.[card.id]?.path;
     if (oldRelative && oldRelative !== relativeSlash(relativePath)) {
@@ -356,25 +383,59 @@ async function syncCardsOnce(payload) {
 
   await writeDurable(manifestPath, `${JSON.stringify(next, null, 2)}\n`);
   await writeDurable(path.join(VAULT_ROOT, "系统", "latest-state.json"), `${JSON.stringify({ schemaVersion: payload.schemaVersion || 1, updatedAt: payload.stateUpdatedAt || new Date().toISOString(), entries: cards, tombstones }, null, 2)}\n`);
-  const index = await rebuildSearchIndex(VAULT_ROOT, { entries:cards });
+  let index;
+  try { index = await rebuildSearchIndex(VAULT_ROOT, { entries:cards }); }
+  catch(error) { index = {needsRebuild:true,error:error.message}; }
   const integrity = integrityReport(await markdownInventory(),next);
   await appendSyncLog({ action:"sync-complete", cardCount:cards.length, tombstoneCount:tombstones.length, changes, integrity });
-  return { written: written.length, path: VAULT_ROOT, manifest: relativeSlash(path.relative(VAULT_ROOT, manifestPath)), index, tombstones:tombstones.length, integrity };
+  return { written: written.length, path: VAULT_ROOT, manifest: relativeSlash(path.relative(VAULT_ROOT, manifestPath)), index, tombstones:tombstones.length, integrity, revision:(await readCardFiles(VAULT_ROOT)).revision, state:{schemaVersion:2,updatedAt:next.updatedAt,entries:cards,tombstones},canvasDocuments };
 }
 
 export async function loadLatestState() {
-  const statePath = path.join(VAULT_ROOT, "系统", "latest-state.json");
-  try {
-    const state = JSON.parse(await fs.readFile(statePath, "utf8"));
-    const entries = state?.entries || state?.cards;
-    if (!Array.isArray(entries)) throw new Error("移动硬盘中的最新状态文件格式不正确");
-    const tombstones = normalizeTombstones([...(await readTombstones()), ...(state.tombstones || [])]);
-    const tombstoneIds = new Set(tombstones.map(item => item.id));
-    return { found:true, path:VAULT_ROOT, state:{ ...state, entries:entries.filter(card => !tombstoneIds.has(card.id)), tombstones } };
-  } catch (error) {
-    if (error.code === "ENOENT") return { found:false, path:VAULT_ROOT, state:null };
-    throw error;
-  }
+  await syncQueue;
+  const disk = await readCardFiles(VAULT_ROOT);
+  if(!disk.found && existsSync(path.join(VAULT_ROOT,'vault.json')))throw new Error('资料库的卡片目录缺失，请检查硬盘或从备份恢复；程序未从汇总缓存自动恢复卡片');
+  return {found:disk.found,path:VAULT_ROOT,state:disk.state,revision:disk.revision,source:'card-files'};
+}
+
+export function rebuildVault() {
+  const operation = syncQueue.then(()=>queueCanvasStorage(async()=>{
+    const disk = await readCardFiles(VAULT_ROOT);
+    if(!disk.found) throw new Error('未找到卡片目录，无法重建。请检查资料库是否连接。');
+    const lookups = new Map(), missingAttachments = [], missingCanvases = [];
+    const directory = path.join(VAULT_ROOT,'系统','附件清单');
+    const manifests = await fs.readdir(directory,{withFileTypes:true}).catch(error=>{if(error.code==='ENOENT')return [];throw error;});
+    for(const item of manifests.filter(item=>item.isFile()&&item.name.endsWith('.json'))) {
+      const manifest = JSON.parse(await fs.readFile(path.join(directory,item.name),'utf8'));
+      if(!manifest.cardId || item.name !== `${manifest.cardId}.json` || !manifest.assets || typeof manifest.assets!=='object' || Array.isArray(manifest.assets)) throw new Error('附件清单格式无效：'+item.name);
+      canvasDocumentPath(manifest.cardId);
+      for(const [id,asset] of Object.entries(manifest.assets)) {
+        attachmentIndexPath(id);
+        if(lookups.has(id)) throw new Error('附件 ID 重复：'+id);
+        lookups.set(id,manifest.cardId);
+        const stat = await fs.stat(storedAssetPath(asset)).catch(error=>{if(error.code==='ENOENT')return null;throw error;});
+        if(!stat?.isFile() || stat.size!==asset.size) missingAttachments.push({id,cardId:manifest.cardId,path:asset.relativePath || asset.absolutePath});
+      }
+    }
+    for(const card of disk.state.entries.filter(card=>card.canvasVersion===1)) {
+      try { JSON.parse(await fs.readFile(canvasDocumentPath(card.id),'utf8')); }
+      catch(error) { if(error.code==='ENOENT') missingCanvases.push(card.id); else throw new Error('画布文档无法读取：'+card.title); }
+    }
+    const activeIds = new Set(disk.state.entries.map(card=>card.id));
+    const next = {schemaVersion:2,updatedAt:new Date().toISOString(),cards:Object.fromEntries(disk.files.filter(item=>activeIds.has(item.card.id)).map(item=>[item.card.id,{path:item.relativePath,hash:item.hash,title:item.card.title,type:item.card.type,updatedAt:item.card.updatedAt}]))};
+    await writeAtomicJson(path.join(VAULT_ROOT,'系统','cards-manifest.json'),next);
+    await writeAtomicJson(path.join(VAULT_ROOT,'系统','latest-state.json'),disk.state);
+    for(const [id,cardId] of lookups) await writeAtomicJson(attachmentIndexPath(id),{cardId});
+    const indexDirectory = path.join(VAULT_ROOT,'系统','附件索引');
+    for(const item of await fs.readdir(indexDirectory,{withFileTypes:true}).catch(error=>{if(error.code==='ENOENT')return [];throw error;})) {
+      if(item.isFile()&&item.name.endsWith('.json')&&!lookups.has(item.name.slice(0,-5))) await fs.unlink(path.join(indexDirectory,item.name));
+    }
+    const index = await rebuildSearchIndex(VAULT_ROOT,{entries:disk.state.entries});
+    await appendSyncLog({action:'rebuild-from-card-files',cards:disk.state.entries.length,attachments:lookups.size,missingAttachments,missingCanvases});
+    return {state:disk.state,revision:disk.revision,cards:disk.state.entries.length,attachments:lookups.size,missingAttachments,missingCanvases,index};
+  }));
+  syncQueue = operation.catch(()=>{});
+  return operation;
 }
 
 export async function querySearchIndex(options = {}) {
@@ -948,9 +1009,9 @@ export async function loadCanvasDocument(cardId) {
       const backup = path.join(backupDir,`${cardId}.json`);
       try { await fs.access(backup); } catch { await writeDurable(backup,JSON.stringify(snapshot)); }
       await writeCanvasSnapshot(cardId,normalized);
-      return normalized;
+      return {...normalized,revision:digest(await fs.readFile(canvasDocumentPath(cardId)))};
     }
-    return externalizeCanvasAssets(cardId,snapshot);
+    return {...await externalizeCanvasAssets(cardId,snapshot),revision:digest(await fs.readFile(canvasDocumentPath(cardId)))};
   }
   catch (error) { if (error.code === "ENOENT") return null; throw error; }
   });
@@ -970,10 +1031,15 @@ export async function saveCanvasDocument(cardId, snapshot) {
   if (snapshot.coverSourceId && !Object.hasOwn(snapshot.assets,snapshot.coverSourceId)) throw new Error('封面资源无效');
   canvasDocumentPath(cardId);
   return queueCanvasStorage(async () => {
+    if(snapshot.requireRevision || Object.hasOwn(snapshot,'baseRevision')) {
+      const current = await fs.readFile(canvasDocumentPath(cardId)).catch(error=>{if(error.code==='ENOENT')return null;throw error;});
+      if((current ? digest(current) : null) !== snapshot.baseRevision) throw new Error('画布已被其他窗口修改，已停止保存，请保留未保存内容并重新打开卡片');
+    }
     await ensureVault();
     const normalized = await externalizeCanvasAssets(cardId,snapshot,{validateLinkedFiles:true});
     await writeCanvasSnapshot(cardId,normalized);
-    return { saved:true, cardId, attachments:normalized.attachments,snapshot:normalized };
+    const revision=digest(await fs.readFile(canvasDocumentPath(cardId)));
+    return { saved:true, cardId, attachments:normalized.attachments,snapshot:{...normalized,revision} };
   });
 }
 
@@ -1019,7 +1085,9 @@ export function createServer() {
       await ensureVault();
       return sendJson(res, 200, await vaultStatus());
     }
-    if (url.pathname === "/api/vault/sync-cards" && req.method === "POST") return sendJson(res, 200, await syncCards(await readBody(req)));
+    if (url.pathname === '/api/vault/state' && req.method === 'GET') return sendJson(res,200,await loadLatestState());
+    if (url.pathname === '/api/vault/rebuild' && req.method === 'POST') return sendJson(res,200,await rebuildVault());
+    if (url.pathname === "/api/vault/sync-cards" && req.method === "POST") return sendJson(res, 200, await syncCards({...await readBody(req,MAX_CANVAS_BODY),requireRevision:true}));
     const canvasRoute = url.pathname.match(/^\/api\/canvas\/([a-zA-Z0-9_-]{1,128})$/);
     const canvasMediaRoute = url.pathname.match(/^\/api\/canvas-media\/([a-zA-Z0-9_-]{1,128})$/);
     const canvasFileRoute=url.pathname.match(/^\/api\/canvas-file\/([a-zA-Z0-9_-]{1,128})$/);
@@ -1041,11 +1109,11 @@ export function createServer() {
     }
     if (canvasMediaRoute && req.method === "GET") return sendJson(res, 200, {dataUrl:await getCanvasMediaDataUrl(canvasMediaRoute[1])});
     if (canvasRoute && req.method === "GET") return sendJson(res, 200, { snapshot:await loadCanvasDocument(canvasRoute[1]) });
-    if (canvasRoute && req.method === "POST") return sendJson(res, 200, await saveCanvasDocument(canvasRoute[1], await readBody(req, MAX_CANVAS_BODY)));
+    if (canvasRoute && req.method === "POST") return sendJson(res, 200, await saveCanvasDocument(canvasRoute[1], {...await readBody(req, MAX_CANVAS_BODY),requireRevision:true}));
     if (url.pathname.startsWith("/api/")) return sendJson(res, 404, { error: "Unknown API" });
     await serveStatic(url.pathname, res);
   } catch (error) {
-    sendJson(res, 400, { error: error.message });
+    sendJson(res, error.code==='VAULT_CONFLICT'?409:400, { error: error.message,code:error.code });
   }
   });
 }

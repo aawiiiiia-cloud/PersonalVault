@@ -2,6 +2,7 @@ import path from "node:path";
 import CardMarkdown from "./card-markdown.js";
 import { promises as fs } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import {readCardFiles} from './vault-cards.mjs';
 
 const INDEX_RELATIVE_PATH = path.join("系统", "索引", "knowledge.sqlite");
 const REFERENCE_FIELDS = ["areaRefs", "projectRefs", "sourceRefs", "relatedRefs"];
@@ -14,39 +15,14 @@ function readJson(filePath, fallback) {
   return fs.readFile(filePath, "utf8").then(JSON.parse).catch(() => fallback);
 }
 
-async function readCardsFromMarkdown(vaultRoot) {
-  const manifest = await readJson(path.join(vaultRoot, "系统", "cards-manifest.json"), null);
-  const tombstones = await readJson(path.join(vaultRoot, "系统", "tombstones.json"), { tombstones:[] });
-  const tombstoneIds = new Set((tombstones?.tombstones || []).map(item => item.id));
-  const registeredPaths = Object.values(manifest?.cards || {}).map(item => item?.path).filter(Boolean);
-  const cards = [];
-  for (const relativePath of registeredPaths) {
-    const itemPath = path.resolve(vaultRoot, relativePath);
-    if (!itemPath.startsWith(path.resolve(vaultRoot) + path.sep) || path.extname(itemPath).toLowerCase() !== ".md") continue;
-    let markdown;
-    try { markdown = await fs.readFile(itemPath, "utf8"); } catch { continue; }
-    const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-    if (!match) continue;
-    const card = {};
-    match[1].split(/\r?\n/).forEach(line => {
-      const separator = line.indexOf(":");
-      if (separator < 1) return;
-      const key = line.slice(0, separator).trim();
-      const raw = line.slice(separator + 1).trim();
-      try { card[key] = JSON.parse(raw); } catch { card[key] = raw; }
-    });
-    if (card.id && card.type && card.title && !tombstoneIds.has(card.id)) cards.push(card);
-  }
-  return cards;
-}
-
 export async function loadRebuildState(vaultRoot) {
-  const tombstones = await readJson(path.join(vaultRoot, "系统", "tombstones.json"), { tombstones:[] });
-  const tombstoneIds = new Set((tombstones?.tombstones || []).map(item => item.id));
-  const state = await readJson(path.join(vaultRoot, "系统", "latest-state.json"), null);
-  const entries = state?.entries || state?.cards;
-  if (Array.isArray(entries) && entries.length) return { ...state, entries:entries.filter(card => !tombstoneIds.has(card.id)), source:"latest-state" };
-  return { schemaVersion:1, updatedAt:new Date().toISOString(), entries:await readCardsFromMarkdown(vaultRoot), source:"markdown-cards" };
+  const disk = await readCardFiles(vaultRoot);
+  if(disk.found) return {...disk.state,source:'markdown-cards'};
+  // Compatibility for legacy migration tools with no card directory yet.
+  const state = await readJson(path.join(vaultRoot,'系统','latest-state.json'),null);
+  if(!state) return {...disk.state,source:'markdown-cards'};
+  const deletedIds=new Set(disk.state.tombstones.map(item=>item.id));
+  return {...state,entries:(state.entries || state.cards || []).filter(card=>!deletedIds.has(card.id)),source:'legacy-state'};
 }
 
 function statusValue(card) {
@@ -61,7 +37,7 @@ function textValue(value) {
 }
 
 function searchableBody(card) {
-  const ignored = new Set(["id", "type", "title", "createdAt", "updatedAt", "created", "updated", "deletedAt", ...REFERENCE_FIELDS]);
+  const ignored = new Set(["id", "type", "title", "createdAt", "updatedAt", "created", "updated", "deletedAt", "legacyRecord", ...REFERENCE_FIELDS]);
   return Object.entries(card)
     .filter(([key]) => !ignored.has(key))
     .map(([key, value]) => key === "content" ? CardMarkdown.plainText(value) : textValue(value))

@@ -41,14 +41,20 @@
 
   function migrateEntry(entry) {
     if (!MAIN_TYPES.has(entry?.type)) return { ...entry };
+    if(Number(entry.structureVersion || 1)>VERSION) throw new Error(`卡片“${entry.title || entry.id}”使用更新的数据版本，请升级应用后打开`);
     const alreadyV2=Number(entry.structureVersion) >= VERSION;
     const output={
+      ...(alreadyV2 ? entry : {}),
       id:entry.id,type:entry.type,title:entry.title,structureVersion:VERSION,
       createdAt:entry.createdAt || entry.created,updatedAt:entry.updatedAt || entry.updated,
       deletedAt:entry.deletedAt || null,
       areaRefs:uniqueIds(entry.areaRefs),
       relatedRefs:uniqueIds([...(entry.relatedRefs || []),...(entry.projectRefs || [])]).filter(id=>id!==entry.id)
     };
+    // Preserve the original structured record once; generated display text is
+    // not a substitute for the source fields. Normalization stays idempotent.
+    if(entry.legacyRecord) output.legacyRecord=entry.legacyRecord;
+    else if(!alreadyV2) output.legacyRecord={...entry,structureVersion:Number(entry.structureVersion || 1)};
     if (entry.archived) output.archived=true;
     if (entry.canvasVersion === 1) output.canvasVersion=1;
     if (typeof entry.legacyContent === "string") output.legacyContent=entry.legacyContent;

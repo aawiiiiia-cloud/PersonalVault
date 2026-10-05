@@ -42,8 +42,8 @@ try {
   assert.deepEqual(await readFile((await vault.getAsset(shared.id)).absolutePath),bytes,'old IDs remain resolvable from backup');
   assert.deepEqual(JSON.parse(await readFile(path.join(report.backup,'metadata','系统','自由画布','A.json'),'utf8')),documents[0]);
   const latest=(await vault.loadLatestState()).state;
-  assert.equal(latest.entries[0].assetId,a.primaryAssetId);
-  assert.equal(latest.entries[0].assetPath,a.attachments.find(x=>x.id===a.primaryAssetId).relativePath);
+  assert.equal(latest.entries.find(card=>card.id==='A').assetId,a.primaryAssetId);
+  assert.equal(latest.entries.find(card=>card.id==='A').assetPath,a.attachments.find(x=>x.id===a.primaryAssetId).relativePath);
   assert.equal(latest.entries.length,2);
   await assert.rejects(vault.saveCanvasDocument('A',a),/附件文件缺失/,'normal saves stay strict after migration');
   console.log('PASS offline migration, independent copies, missing originals, primary/cover references, unregistered file preservation and backup');

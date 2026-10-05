@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import {createReadStream} from 'node:fs';
 import {cp,mkdir,readFile,readdir,rename,stat,writeFile} from 'node:fs/promises';
+import {readCardFiles} from '../vault-cards.mjs';
 
 const args=process.argv.slice(2),vaultArg=args.indexOf('--vault');
 if(vaultArg<0 || !args[vaultArg+1])throw new Error('请指定 --vault 知识库路径');
@@ -19,7 +20,8 @@ async function digest(file){const hash=crypto.createHash('sha256');for await(con
 async function walk(directory){const result=[];for(const item of await readdir(directory,{withFileTypes:true}).catch(e=>{if(e.code==='ENOENT')return [];throw e;})){if(item.isSymbolicLink())throw new Error('迁移目录含有符号链接：'+directory);const file=path.join(directory,item.name);if(item.isDirectory())result.push(...await walk(file));else if(item.isFile())result.push(file);}return result;}
 
 const statePath=path.join(system,'latest-state.json');
-const stateText=await readFile(statePath,'utf8'),state=JSON.parse(stateText);
+const stateText=await readFile(statePath,'utf8'),originalDisk=await readCardFiles(root),state=originalDisk.state;
+if(!originalDisk.found) throw new Error('未找到原始卡片目录，请先检查资料库');
 const cards=state.entries || state.cards;
 assert(Array.isArray(cards),'没有卡片列表');
 const registry=await readJson(path.join(system,'cards-manifest.json'));
@@ -100,7 +102,7 @@ try{
     updatedCards[i]=replace(card);
   }
   const migratedAt=new Date().toISOString();
-  await vault.syncCards({schemaVersion:state.schemaVersion,entries:updatedCards,tombstones:state.tombstones || [],stateUpdatedAt:migratedAt});
+  await vault.syncCards({schemaVersion:state.schemaVersion,entries:updatedCards,tombstones:state.tombstones || [],stateUpdatedAt:migratedAt,baseRevision:originalDisk.revision,requireRevision:true});
   const latest=(await vault.loadLatestState()).state;
   assert.deepEqual(latest.entries.map(c=>c.id).sort(),cards.map(c=>c.id).sort());
   // Check all live structured references after publishing, before archiving originals.

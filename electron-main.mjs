@@ -115,12 +115,19 @@ ipcMain.handle("vault:status", async () => {
 
 ipcMain.handle("vault:syncCards", async (_event, bundle) => {
   vault ||= await import("./server.mjs");
-  return vault.syncCards(bundle);
+  const result=await vault.syncCards({...bundle,requireRevision:true});
+  for(const window of BrowserWindow.getAllWindows())if(!window.isDestroyed()&&window.webContents!==_event.sender)window.webContents.send('vault:changed');
+  return result;
 });
 
 ipcMain.handle("vault:loadLatestState", async () => {
   vault ||= await import("./server.mjs");
   return vault.loadLatestState();
+});
+
+ipcMain.handle('vault:rebuild',async()=>{
+  vault ||= await import('./server.mjs');
+  return vault.rebuildVault();
 });
 
 ipcMain.handle('cards:openWindow',async (event,cardId,options={})=>{
@@ -188,7 +195,7 @@ ipcMain.handle('canvas:resolveAsset',async(_event,cardId,sourceId,hint)=>{
 
 ipcMain.handle("canvas:save", async (_event, cardId, snapshot) => {
   vault ||= await import("./server.mjs");
-  return vault.saveCanvasDocument(cardId, snapshot);
+  return vault.saveCanvasDocument(cardId, {...snapshot,requireRevision:true});
 });
 
 ipcMain.handle("canvas:imageDataUrl", async (_event, assetId) => {

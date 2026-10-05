@@ -1,43 +1,4 @@
 const STORAGE_KEY = "zhixingtai-v1";
-const RECENT_VISITS_KEY = 'knowledge-workbench-recent-visits';
-const ACTIVITY_PREFIX='knowledge-workbench-activity:';
-function activityDay(date=new Date()) {
-  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-}
-function recordActivity() {
-  const now=new Date();
-  localStorage.setItem(ACTIVITY_PREFIX+crypto.randomUUID(),activityDay(now));
-  const cutoff=new Date(now);cutoff.setDate(cutoff.getDate()-370);
-  const oldest=activityDay(cutoff);
-  for(const key of Object.keys(localStorage))if(key.startsWith(ACTIVITY_PREFIX)&&localStorage.getItem(key)<oldest)localStorage.removeItem(key);
-  if(!standaloneCardId)renderActivityCalendar();
-}
-let homeRecentIndex=0,homeRecentSignature='',homeRecentWheelAt=0,homeRecentWheelTimer=null;
-let homeRecentAnimation=null,homeRecentQueuedStep=0;
-let homeRecentMotion=null;
-function createHomeStackState(id){return {id,index:0,signature:'',animation:null,queued:0,motion:null,wheelAt:0,wheelTimer:null,pool:[],bag:[]};}
-const homeStacks={
-  recent:{id:'#homeRecent',
-    get index(){return homeRecentIndex;},set index(value){homeRecentIndex=value;},
-    get animation(){return homeRecentAnimation;},set animation(value){homeRecentAnimation=value;},
-    get queued(){return homeRecentQueuedStep;},set queued(value){homeRecentQueuedStep=value;},
-    get motion(){return homeRecentMotion;},set motion(value){homeRecentMotion=value;},
-    get wheelAt(){return homeRecentWheelAt;},set wheelAt(value){homeRecentWheelAt=value;},
-    get wheelTimer(){return homeRecentWheelTimer;},set wheelTimer(value){homeRecentWheelTimer=value;},pool:[]},
-  projects:createHomeStackState('#homeProjects'),
-  pending:createHomeStackState('#homePending')
-};
-const RECENT_MOTION_SETTINGS=Object.freeze({"downMs":470,"upMs":420,"maxAcceleration":2,"responseMs":5,"settleMs":10,"idleMs":35,"sensitivity":1.6,"gestureLimit":1,"gestureGapMs":120,"notchThreshold":30,"escapePadding":14,"tilt":10});
-const RECENT_MOTION_PREVIEW=new URLSearchParams(location.search).has('recent-motion-preview');
-function recentMotionSettings(){return RECENT_MOTION_PREVIEW&&window.__recentMotionSettings?window.__recentMotionSettings:RECENT_MOTION_SETTINGS;}
-function recentVisits() {
-  try { const saved=JSON.parse(localStorage.getItem(RECENT_VISITS_KEY)||'[]'); return Array.isArray(saved)?saved.filter(item=>typeof item.id==='string'&&typeof item.at==='string'):[]; } catch { return []; }
-}
-function recordVisit(entry) {
-  if(!entry||entry.deletedAt||!['project','knowledge','source'].includes(entry.type))return;
-  localStorage.setItem(RECENT_VISITS_KEY,JSON.stringify([{id:entry.id,at:new Date().toISOString()},...recentVisits().filter(item=>item.id!==entry.id)].slice(0,24)));
-  if(!standaloneCardId&&currentView==='home')renderHome();
-}
 const standaloneCardId=new URLSearchParams(location.search).get('card');
 if(standaloneCardId)document.body.classList.add('standalone-card-window');
 const SEMANTIC_MODEL_KEY = "knowledge-workbench-semantic-model";
@@ -177,8 +138,26 @@ const formGroups = {
   ]
 };
 
-const hadSavedLocalState = localStorage.getItem(STORAGE_KEY) !== null;
-let state = loadState();
+let state = window.workbenchDesktop?.isDesktop ? WorkbenchData.normalizeState({entries:[]}) : loadState();
+const vaultSession=WorkbenchVaultSession.create({
+  normalize:state=>WorkbenchData.normalizeState(state),
+  load:async()=>{
+    if(window.workbenchDesktop?.loadLatestState)return window.workbenchDesktop.loadLatestState();
+    const response=await fetch('/api/vault/state',{cache:'no-store'});
+    const result=await response.json();
+    if(!response.ok)throw new Error(result.error || '资料库无法读取');
+    return result;
+  },
+  sync:async bundle=>{
+    if(window.workbenchDesktop?.syncCards)return window.workbenchDesktop.syncCards(bundle);
+    const response=await fetch('/api/vault/sync-cards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(bundle)});
+    const result=await response.json();
+    if(!response.ok)throw new Error(result.error || '资料库保存失败');
+    return result;
+  }
+});
+const canvasRevisions=new Map();
+const floatingCanvasRevisions=new Map();
 let currentView = "home";
 let currentFilter = "all";
 const collectionAreaFilterByView={ projects:"all",knowledge:"all",sources:"all" };
@@ -356,6 +335,9 @@ let graphEntrancePending = false;
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
+const {renderHome,renderActivityCalendar,recordActivity,recordVisit,handleStackClick,RECENT_VISITS_KEY,ACTIVITY_PREFIX}=WorkbenchHome.create({
+$,$$,standaloneCardId,getState:()=>state,getView:()=>currentView,summary,escapeHtml,typeLabel,statusTone,statusOf,entryById,inboxEntries,cardCoverData,loadCardSummary
+});
 
 function loadState() {
   try {
@@ -372,56 +354,48 @@ function nextStateTime(previous=state.updatedAt) {
   return new Date(Math.max(Date.now(),(Date.parse(previous) || 0)+1)).toISOString();
 }
 
-function saveState(message="已保存") {
-  state.schemaVersion = WorkbenchData.SCHEMA_VERSION;
-  state.updatedAt = nextStateTime();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  if(message!=="已恢复演示数据")recordActivity();
+async function saveState(message='已保存') {
+  const nextState=WorkbenchData.normalizeState(state);
   render();
-  toast(message);
-  if (window.workbenchDesktop?.isDesktop) {
-    window.workbenchDesktop.syncCards(WorkbenchData.createBundle(state)).catch(error => {
-      console.error(error);
-      toast("电脑中已保存，但移动硬盘同步失败");
-    });
-  }
+  try { await commitUnifiedState(nextState,message);return true; }
+  catch(error) {console.error(error);toast('尚未保存到硬盘：'+error.message);return false;}
 }
 
-async function commitUnifiedState(nextState,message="已保存") {
-  nextState.schemaVersion=WorkbenchData.SCHEMA_VERSION;
+function cacheSavedState(nextState,{keepPrevious=false}={}) {
+  try {
+    const previous=localStorage.getItem(STORAGE_KEY);
+    if(keepPrevious&&previous&&!localStorage.getItem(STORAGE_KEY+'-previous-cache'))localStorage.setItem(STORAGE_KEY+'-previous-cache',previous);
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(nextState));
+  } catch(error){console.warn('本机缓存不可写，继续使用硬盘资料',error);}
+}
+
+async function commitUnifiedState(nextState,message='已保存',options={}) {
+  nextState=WorkbenchData.normalizeState(nextState);
   nextState.updatedAt=nextStateTime();
   const report=WorkbenchData.validateState(nextState);
-  if (!report.ok) throw new Error(report.errors[0] || "数据检查失败");
-  let syncResult=null;
-  if (window.workbenchDesktop?.isDesktop) {
-    syncResult=await window.workbenchDesktop.syncCards(WorkbenchData.createBundle(nextState));
-  }
-  state=nextState;
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
-  recordActivity();
-  render();
-  toast(message);
-  return syncResult;
+  if(!report.ok)throw new Error(report.errors[0] || '数据检查失败');
+  let result;
+  try {result=await vaultSession.save({...WorkbenchData.createBundle(nextState),...options});}
+  catch(error){$('#vaultResult').innerHTML='<div class="health-line error">尚未保存到硬盘：'+escapeHtml(error.message)+' 可通过“导出完整迁移包”保留本次未保存修改。</div>';throw error;}
+  state=WorkbenchData.normalizeState(result.state || nextState);
+  cacheSavedState(state);
+  if(message!=='已恢复演示数据')try{recordActivity();}catch(error){console.warn('活跃记录不可写，卡片已保存',error);}
+  render();toast(message);
+  if(result.index?.error)toast('卡片已保存，搜索目录需要重建：'+result.index.error);
+  return result;
 }
 
 async function hydrateDesktopState() {
-  if (!window.workbenchDesktop?.isDesktop) return;
   try {
-    const result = await window.workbenchDesktop.loadLatestState();
-    if (!result?.found || !result.state?.entries?.length) return;
-    const diskTime = Date.parse(result.state.updatedAt || 0) || 0;
-    const localTime = Date.parse(state.updatedAt || 0) || 0;
-    if (!hadSavedLocalState || diskTime > localTime) {
-      state = WorkbenchData.normalizeState(result.state);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      render();
-      toast("已从移动硬盘载入最新内容");
-    } else if (!standaloneCardId && localTime > diskTime) {
-      await window.workbenchDesktop.syncCards(WorkbenchData.createBundle(state));
-    }
-  } catch (error) {
-    console.error(error);
-    toast("移动硬盘内容暂时无法读取");
+    const result=await vaultSession.open();
+    state=WorkbenchData.normalizeState(result.state || {entries:[]});
+    cacheSavedState(state,{keepPrevious:true});
+    canvasRevisions.clear();cardCoverDataCache.clear();canvasSummaryCache.clear();
+    render();
+    return true;
+  } catch(error) {
+    console.error(error);toast('资料库无法载入，已停止硬盘写入：'+error.message);
+    return false;
   }
 }
 
@@ -2010,275 +1984,6 @@ function mainReferenceChipHtml(ref,field=null){
   return `<span class="ref-chip type-chip type-chip--${escapeHtml(ref.type)} ${ref.type==='area'?'area-chip':'content-chip'}"><button type="button" class="ref-open" data-open-ref="${escapeHtml(ref.id)}"><small>${escapeHtml(typeLabel(ref.type))}</small><span class="ref-title">${escapeHtml(ref.title)}</span></button>${remove}</span>`;
 }
 
-function homeStackCard(entry,index,at,stackKey) {
-  const text=summary(entry);
-  const time=stackKey==='recent'?at:entry.updatedAt;
-  return '<button class="home-recent-card" data-home-stack="'+stackKey+'" data-recent-index="'+index+'" data-recent-id="'+escapeHtml(entry.id)+'"><span class="home-recent-meta"><span class="entry-type entry-type--'+entry.type+'">'+typeLabel(entry.type)+'</span><span class="status-pill status--'+statusTone(entry)+'">'+escapeHtml(statusOf(entry))+'</span></span><h3>'+escapeHtml(entry.title)+'</h3><p>'+escapeHtml((text==='暂时没有摘要'?'':text).slice(0,1200))+'</p><span class="home-visit-time">'+(stackKey==='recent'?'访问于 ':'修改于 ')+escapeHtml(time?WorkbenchData.dayOf(time):'')+'</span></button>';
-}
-function shuffledHomeEntries(entries) {
-  const result=entries.slice();
-  for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}
-  return result;
-}
-function recycleHomeStack(stackKey,from,step) {
-  if(stackKey==='recent'||!step)return;
-  const stack=homeStacks[stackKey],count=$$(stack.id+' .home-recent-card').length;
-  if(stack.pool.length<=count)return;
-  const direction=Math.sign(step);
-  for(let turn=0;turn<Math.abs(step);turn++){
-    const center=((from+direction*turn)%count+count)%count,next=(center+direction+count)%count;
-    const cards=$$(stack.id+' .home-recent-card');
-    const retiring=cards.findIndex((card,index)=>Math.abs(recentStackOffset(index,next,count)-recentStackOffset(index,center,count))>1);
-    if(retiring<0)continue;
-    const visible=new Set(cards.map(card=>card.dataset.recentId));
-    if(!stack.bag?.some(id=>!visible.has(id)))stack.bag=(stackKey==='pending'?shuffledHomeEntries(stack.pool):stack.pool).map(entry=>entry.id);
-    const at=stack.bag.findIndex(id=>!visible.has(id));
-    if(at<0)continue;
-    const entry=entryById(stack.bag.splice(at,1)[0]);
-    if(entry)cards[retiring].outerHTML=homeStackCard(entry,retiring,null,stackKey);
-  }
-  void hydrateRecentCovers(stackKey);
-}
-function renderHome() {
-  if(standaloneCardId)return;
-  const visits=recentVisits().map(visit=>({...visit,entry:entryById(visit.id)})).filter(item=>item.entry&&!item.entry.deletedAt).slice(0,6);
-  const projects=state.entries.filter(entry=>entry.type==='project'&&!entry.deletedAt&&entry.status==='active').sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
-  const pending=[...new Map([...inboxEntries(),...state.entries.filter(entry=>!entry.deletedAt&&((entry.type==='source'&&entry.readingStatus==='unread')||(entry.type==='knowledge'&&entry.confidence==='draft')))].map(entry=>[entry.id,entry])).values()];
-  $('#homeProjectCount').textContent=projects.length;
-  $('#homePendingCount').textContent=pending.length;
-  const decks={recent:visits,projects:projects.slice(0,6).map(entry=>({entry})),pending:shuffledHomeEntries(pending).slice(0,6).map(entry=>({entry}))};
-  const empty={recent:'打开项目、知识或资料后，会在这里显示。',projects:'暂无进行中的项目。',pending:'暂无待整理内容。'};
-  for(const [stackKey,stack] of Object.entries(homeStacks)) {
-    updateRecentStack(0,{stackKey});
-    const pool=stackKey==='pending'?pending:stackKey==='projects'?projects:decks[stackKey].map(item=>item.entry);
-    const signature=pool.map(entry=>entry.id).join('|');
-    if(stackKey!=='recent'&&signature===stack.signature){
-      const current=$$(stack.id+' .home-recent-card').map(card=>pool.find(entry=>entry.id===card.dataset.recentId)).filter(Boolean);
-      if(current.length)decks[stackKey]=current.map(entry=>({entry}));
-    }else stack.bag=[];
-    stack.pool=pool;
-    if(signature!==stack.signature){stack.index=0;stack.signature=signature;}
-    $(stack.id).classList.toggle('has-cards',decks[stackKey].length>0);
-    $(stack.id).innerHTML=decks[stackKey].length?decks[stackKey].map(({entry,at},index)=>homeStackCard(entry,index,at,stackKey)).join(''):'<div class="home-empty"><span>'+empty[stackKey]+'</span></div>';
-    updateRecentStack(0,{stackKey});void hydrateRecentCovers(stackKey);
-  }
-  renderActivityCalendar();
-}
-async function hydrateRecentCovers(stackKey='recent') {
-  await Promise.all($$(homeStacks[stackKey].id+' .home-recent-card').map(async card=>{
-    const entry=entryById(card.dataset.recentId);
-    if(!entry||card.classList.contains('has-cover')||card.dataset.hydrating)return;
-    card.dataset.hydrating='true';
-    try {
-      if(entry.assetId||entry.canvasVersion===1){
-        const data=await cardCoverData(entry),cover=data.items.find(item=>item.id===data.selectedId)||data.items[0];
-        if(cover?.url&&card.isConnected){const image=new Image();image.className='home-recent-cover';image.alt='';image.draggable=false;image.decoding='async';image.src=cover.url;await image.decode();if(card.isConnected){card.querySelector('h3').after(image);card.classList.add('has-cover');}}
-      }
-    } catch { /* Keep the text fallback if media is unavailable. */ }
-    finally {
-      if(card.isConnected&&!card.classList.contains('has-cover')&&entry.canvasVersion===1){try{const text=await loadCardSummary(entry);if(card.isConnected)card.querySelector('p').textContent=text||'';}catch{}}
-      delete card.dataset.hydrating;
-    }
-  }));
-}
-
-function recentStackOffset(index,center,count) {
-  let offset=(index-center+count)%count;
-  if(offset>Math.floor(count/2))offset-=count;
-  return offset;
-}
-function recentStackTransform(y,z,scale,x=0,tilt=0,rotation=0) {
-  return `perspective(1100px) translate3d(${x}px,${y}px,${z}px) rotateX(${tilt}deg) rotateZ(${rotation}deg) scale(${scale})`;
-}
-function recentStackPose(offset) {
-  if(!offset)return {x:0,rotation:0};
-  const depth=Math.abs(offset),side=depth%2?1:-1;
-  return {x:side*(6+depth*2),rotation:side*Math.sign(offset)*(.45+depth*.2)};
-}
-function updateRecentStack(step=0,{queueLimit=6,duration=600,continuous=false,stackKey='recent'}={}) {
-  const stack=homeStacks[stackKey];
-  const cfg=recentMotionSettings();
-  if(stack.motion&&!continuous){
-    cancelAnimationFrame(stack.motion.frame);stack.motion=null;
-    const previous=stack.animation;stack.animation=null;stack.queued=0;
-    previous?.forEach(animation=>animation.cancel());$(stack.id).classList.remove('is-animating');
-  }
-  const cards=$$(stack.id+' .home-recent-card'),count=cards.length;
-  const container=$(stack.id);
-  stack.layoutWidth=container.getBoundingClientRect().width;
-  const spacing=44*Math.max(1,stack.layoutWidth/320);
-  container.style.setProperty('--home-stack-spacing',spacing+'px');
-  if(step&&stack.animation){stack.queued=Math.max(-queueLimit,Math.min(queueLimit,stack.queued+step));return;}
-  if(!continuous){clearTimeout(stack.wheelTimer);stack.wheelTimer=null;stack.wheelAt=0;}
-  if(!step&&stack.animation){
-    const previous=stack.animation;stack.animation=null;stack.queued=0;
-    previous.forEach(animation=>animation.cancel());
-    $(stack.id).classList.remove('is-animating');
-  }
-  if(!count)return;
-  const previousIndex=stack.index;
-  stack.index=((stack.index+step)%count+count)%count;
-  cards.forEach((card,index)=>{
-    const offset=recentStackOffset(index,stack.index,count);
-    const pose=recentStackPose(offset);
-    card.style.transform=recentStackTransform(offset*spacing,0,1-Math.abs(offset)*.07,pose.x,0,pose.rotation);
-    card.style.zIndex=String(10-Math.abs(offset));
-    card.classList.toggle('is-front',offset===0);
-    card.tabIndex=offset===0?0:-1;
-    card.setAttribute('aria-hidden',String(offset!==0));
-    if(offset===0)card.dataset.edit=card.dataset.recentId;else delete card.dataset.edit;
-  });
-  if(!step||count<2||previousIndex===stack.index)return;
-  if(matchMedia('(prefers-reduced-motion:reduce)').matches){recycleHomeStack(stackKey,previousIndex,step);updateRecentStack(0,{continuous,stackKey});return;}
-  const reverse=step===-1,direction=reverse?1:Math.sign(step);
-  const smooth=value=>{const t=Math.max(0,Math.min(1,value));return t*t*(3-2*t);};
-  const spring=(value,damping=7,frequency=9)=>{
-    const t=Math.max(0,Math.min(1,value));
-    return t===1?1:1-Math.exp(-damping*t)*(Math.cos(frequency*t)+(damping/frequency)*Math.sin(frequency*t));
-  };
-  const animations=cards.map((card,index)=>{
-    const from=recentStackOffset(index,reverse?stack.index:previousIndex,count),to=recentStackOffset(index,reverse?previousIndex:stack.index,count);
-    const wrapping=Math.abs(to-from)>Math.abs(step),leaving=index===(reverse?stack.index:previousIndex);
-    const escapeY=-direction*(card.offsetHeight+cfg.escapePadding);
-    const fromPose=recentStackPose(from),toPose=recentStackPose(to);
-    const frames=Array.from({length:41},(_,frame)=>{
-      const t=frame/40;
-      const progress=to===0?spring((t-.12)/.88):smooth(t);
-      const scaleFrom=1-Math.abs(from)*.07,scaleTo=1-Math.abs(to)*.07;
-      let x=fromPose.x+(toPose.x-fromPose.x)*progress,y=from*spacing+(to-from)*spacing*progress,scale=scaleFrom+(scaleTo-scaleFrom)*progress,rotation=fromPose.rotation+(toPose.rotation-fromPose.rotation)*progress,tilt=0,z=0;
-      if(to===0) {
-        const reveal=Math.sin(Math.PI*Math.max(0,Math.min(1,(t-.12)/.88)));
-        tilt=-direction*4.5*reveal;z=11*reveal;
-      }
-      if(leaving) {
-        // Clear the foreground card before changing the departing card's layer.
-        // The card stays opaque, so media never dissolve into another card.
-        const out=smooth((t-.10)/.34),back=spring((t-.54)/.46,12,8);
-        const lift=smooth(t/.12)*(1-smooth((t-.16)/.30));
-        y=t<.5?escapeY*out:escapeY+(to*spacing-escapeY)*back;
-        scale=t<.5?1+.028*lift-.04*out:.96+(scaleTo-.96)*back;
-        rotation=t<.5?direction*(3*lift+1.5*out):direction*1.5*(1-back)+toPose.rotation*back;
-        tilt=direction*cfg.tilt*lift;z=14*lift;x=t<.5?direction*8*lift:toPose.x*back;
-      }
-      const layer=leaving?(t<.5?20:10-Math.abs(to)):to===0?15:wrapping?1:10-Math.max(Math.abs(from),Math.abs(to));
-      return {offset:t,zIndex:String(frame===40?10-Math.abs(to):layer),transform:recentStackTransform(y,z,scale,x,tilt,rotation),opacity:1};
-    });
-    const path=reverse?frames.slice().reverse().map(frame=>({...frame,offset:1-frame.offset})):frames;
-    return card.animate(path,{duration,easing:'linear'});
-  });
-  stack.animation=animations;
-  $(stack.id).classList.add('is-animating');
-  Promise.allSettled(animations.map(animation=>animation.finished)).then(()=>{
-    if(stack.animation!==animations)return;
-    stack.animation=null;$(stack.id).classList.remove('is-animating');
-    if(!continuous){recycleHomeStack(stackKey,previousIndex,step);updateRecentStack(0,{stackKey});}
-    if(stack.queued){const next=Math.sign(stack.queued);stack.queued-=next;updateRecentStack(next,{stackKey});}
-  });
-}
-
-// A single position and velocity drive the existing card arc throughout a wheel gesture.
-// Each integer is a settled card; fractional positions scrub an opaque lift/return arc.
-function scrollRecentStack(delta,now,{lineMode=false,stackKey='recent'}={}) {
-  const stack=homeStacks[stackKey];
-  const cfg=recentMotionSettings();
-  if(matchMedia('(prefers-reduced-motion:reduce)').matches){updateRecentStack(Math.sign(delta),{stackKey});return;}
-  if(!stack.motion){
-    updateRecentStack(0,{stackKey});
-    stack.motion={origin:stack.index,base:0,position:0,target:0,gestureAnchor:0,velocity:0,segment:null,last:now,frame:0,active:true};
-  }
-  const motion=stack.motion;
-  const gap=stack.wheelAt?now-stack.wheelAt:Infinity;
-  if(!motion.active&&gap>cfg.gestureGapMs)motion.gestureAnchor=Math.round(motion.target);
-  stack.wheelAt=now;motion.active=true;
-  // A wheel detent commits at least one card. Small touchpad packets accumulate.
-  // Cap the entire gesture, rather than queuing more cards after reaching its limit.
-  const discrete=lineMode||Math.abs(delta)>=cfg.notchThreshold||(gap>120&&Math.abs(delta)>=32);
-  const distance=discrete?Math.sign(delta)*Math.max(1,Math.round(Math.abs(delta)*cfg.sensitivity/120)):delta*cfg.sensitivity/120;
-  motion.target=Math.max(motion.gestureAnchor-cfg.gestureLimit,Math.min(motion.gestureAnchor+cfg.gestureLimit,motion.target+distance));
-  clearTimeout(stack.wheelTimer);
-  stack.wheelTimer=setTimeout(()=>{
-    stack.wheelTimer=null;
-    if(stack.motion!==motion)return;
-    motion.active=false;
-    motion.target=Math.round(motion.target);
-  },cfg.idleMs);
-  if(!motion.frame)motion.frame=requestAnimationFrame(now=>tickRecentStack(now,stackKey));
-}
-function tickRecentStack(now,stackKey='recent') {
-  const stack=homeStacks[stackKey];
-  const cfg=recentMotionSettings();
-  const motion=stack.motion;if(!motion)return;
-  motion.frame=0;
-  const dt=Math.min(.032,Math.max(.001,(now-motion.last)/1000));motion.last=now;
-  const omega=motion.active?1000/cfg.responseMs:1000/cfg.settleMs,error=motion.position-motion.target,c=motion.velocity+omega*error,decay=Math.exp(-omega*dt);
-  const next=motion.target+(error+c*dt)*decay;
-  motion.velocity=(motion.velocity-omega*c*dt)*decay;
-  // Larger gestures can traverse several cards. Adapt follow speed to distance
-  // without discarding input or restarting the animation.
-  const defaultSpeed=1000/(error<0?cfg.downMs:cfg.upMs);
-  const multiple=Math.abs(motion.target-motion.gestureAnchor)>1;
-  const speed=Math.min(defaultSpeed*cfg.maxAcceleration,multiple?defaultSpeed+Math.abs(error)*3:defaultSpeed);
-  const travel=Math.max(-speed*dt,Math.min(speed*dt,next-motion.position));
-  motion.position+=travel;
-  motion.velocity=Math.max(-speed,Math.min(speed,motion.velocity));
-  const cards=$$(stack.id+' .home-recent-card'),count=cards.length;
-  if(count<2){updateRecentStack(0,{stackKey});return;}
-  // Both directions sample the same canonical forward arc. Reverse scrolling
-  // rewinds that arc instead of ejecting the current card downwards.
-  const base=Math.floor(motion.position),progress=motion.position-base;
-  if(!motion.segment||motion.segment.base!==base){
-    motion.base=base;
-    stack.index=((motion.origin+base)%count+count)%count;
-    updateRecentStack(0,{continuous:true,stackKey});motion.segment=null;
-    updateRecentStack(1,{continuous:true,stackKey});
-    if(stack.animation){
-      stack.animation.forEach(animation=>animation.pause());
-      motion.segment={base,animations:stack.animation};
-    }
-  }
-  if(motion.segment){
-    motion.segment.animations.forEach(animation=>animation.currentTime=progress*animation.effect.getTiming().duration);
-  }
-  if(!motion.active&&Math.abs(motion.position-motion.target)<.003&&Math.abs(motion.velocity)<.04){
-    motion.base=motion.target;
-    stack.index=((motion.origin+motion.base)%count+count)%count;
-    updateRecentStack(0,{continuous:true,stackKey});
-    recycleHomeStack(stackKey,motion.origin,motion.base);
-    updateRecentStack(0,{continuous:true,stackKey});stack.motion=null;return;
-  }
-  motion.frame=requestAnimationFrame(now=>tickRecentStack(now,stackKey));
-}
-
-function renderActivityCalendar() {
-  if(standaloneCardId)return;
-  const counts=new Map();
-  for(const key of Object.keys(localStorage))if(key.startsWith(ACTIVITY_PREFIX)) {
-    const day=localStorage.getItem(key);
-    if(/^\d{4}-\d{2}-\d{2}$/.test(day))counts.set(day,(counts.get(day)||0)+1);
-  }
-  const end=new Date();end.setHours(12,0,0,0);
-  const first=new Date(end);first.setDate(first.getDate()-364);
-  const start=new Date(first);start.setDate(start.getDate()-((start.getDay()+6)%7));
-  const firstDay=activityDay(first),lastDay=activityDay(end);
-  let total=0,activeDays=0,months='',cells='',previousMonth=-1;
-  for(let week=0;week<53;week++) {
-    const weekStart=new Date(start);weekStart.setDate(start.getDate()+week*7);
-    const weekEnd=new Date(weekStart);weekEnd.setDate(weekEnd.getDate()+6);
-    const month=(weekEnd>end?end:weekEnd).getMonth();
-    if(month!==previousMonth){months+=`<span style="grid-column:${week+1}${week>50?';justify-self:end':''}">${month+1}月</span>`;previousMonth=month;}
-    for(let row=0;row<7;row++) {
-      const date=new Date(weekStart);date.setDate(date.getDate()+row);
-      const day=activityDay(date),inRange=day>=firstDay&&day<=lastDay,count=inRange?(counts.get(day)||0):0;
-      if(count){total+=count;activeDays++;}
-      const level=count>=8?4:count>=4?3:count>=2?2:count?1:0;
-      const label=`${day}：${count} 次活跃`;
-      cells+=`<span class="home-activity-cell ${inRange?'':'outside-range'}" data-day="${day}" data-count="${count}" data-level="${level}" style="grid-column:${week+1};grid-row:${row+1}" ${inRange?`aria-label="${label}" role="img"`:'aria-hidden="true"'}></span>`;
-    }
-  }
-  $('#homeActivityCalendar').innerHTML=`<div class="home-activity-months">${months}</div><div class="home-activity-cells">${cells}</div>`;
-  $('#homeActivitySummary').textContent=`过去一年 · ${activeDays} 天活跃 · ${total} 次操作`;
-}
-
 function mainReadExtrasHtml(entry) {
   const parts=[];
   if(entry.type === "project") {
@@ -2347,6 +2052,7 @@ document.addEventListener('click',async event=>{
   const popup=window.open('./canvas-window.html',`workbench-canvas-${key}`,'popup,width=1080,height=760');
   if(!popup){toast('无法打开画布窗口，请允许弹出窗口');return;}
   floatingCanvasWindows.set(key,popup);
+  floatingCanvasRevisions.set(key,canvasRevisions.get(key) ?? null);
   const ready=new Promise(resolve=>{
     const receive=e=>{if(e.source===popup&&e.data?.type==='personalvault:canvas-window:ready'){window.removeEventListener('message',receive);resolve();}};
     window.addEventListener('message',receive);
@@ -2372,15 +2078,13 @@ async function confirmFloatingCanvas(key,snapshot) {
   if(!floatingCanvasWindows.get(key))throw new Error('画布窗口已断开');
   const stored=await loadCanvasDocument(key);
   if(stored?.coverAssetId)snapshot.coverAssetId=stored.coverAssetId;
-  const result=await saveCanvasDocument(key,snapshot);
-  const normalized=result.snapshot||await loadCanvasDocument(key);
-  const linkedMedia=await canvasMediaLinks(normalized);
   const entry=entryById(key);
-  if(entry){
-    entry.content=snapshot.text;entry.canvasVersion=1;entry.updatedAt=WorkbenchData.isoNow();
-    if(entry.assetId)syncPrimaryAttachment(entry,normalized);
-    saveState('画布修改已保存');
-  }
+  if(!entry)throw new Error('卡片已不存在');
+  const updated={...entry,content:snapshot.text,canvasVersion:1,updatedAt:WorkbenchData.isoNow()};
+  const result=await commitUnifiedState({...state,entries:state.entries.map(card=>card.id===key?updated:card)},'画布修改已保存',{canvasDocuments:{[key]:{...snapshot,baseRevision:floatingCanvasRevisions.get(key) ?? null}}});
+  const normalized=result.canvasDocuments[key];
+  canvasRevisions.set(key,normalized.revision);floatingCanvasRevisions.set(key,normalized.revision);
+  const linkedMedia=await canvasMediaLinks(normalized);
   cardCoverDataCache.clear();canvasSummaryCache.clear();
   const old=[...document.querySelectorAll('dialog[open] .main-canvas-frame')].find(frame=>frame.dataset.canvasCardId===key);
   if(!old)return {snapshot:normalized,linkedMedia};
@@ -2395,19 +2099,27 @@ async function confirmFloatingCanvas(key,snapshot) {
 }
 
 async function loadCanvasDocument(cardId) {
-  if (window.workbenchDesktop?.loadCanvasDocument) return window.workbenchDesktop.loadCanvasDocument(cardId);
-  const response=await fetch(`/api/canvas/${encodeURIComponent(cardId)}`);
-  if (!response.ok) throw new Error(`读取画布失败：${response.status}`);
-  return (await response.json()).snapshot;
+  let snapshot;
+  if(window.workbenchDesktop?.loadCanvasDocument)snapshot=await window.workbenchDesktop.loadCanvasDocument(cardId);
+  else {
+    const response=await fetch('/api/canvas/'+encodeURIComponent(cardId),{cache:'no-store'});
+    if(!response.ok)throw new Error('读取画布失败：'+response.status);
+    snapshot=(await response.json()).snapshot;
+  }
+  // Background cover/summary reads must not advance an editor's save baseline.
+  if(!canvasRevisions.has(cardId))canvasRevisions.set(cardId,snapshot?.revision ?? null);
+  return snapshot;
 }
 
-async function saveCanvasDocument(cardId,snapshot) {
-  const entry=entryById(cardId);
-  snapshot={...snapshot,cardInfo:snapshot.cardInfo || {title:entry?.title || '未命名卡片',type:entry?.type || 'source'}};
-  if (window.workbenchDesktop?.saveCanvasDocument) return window.workbenchDesktop.saveCanvasDocument(cardId,snapshot);
-  const response=await fetch(`/api/canvas/${encodeURIComponent(cardId)}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(snapshot)});
-  if (!response.ok) throw new Error((await response.json().catch(()=>({}))).error || `保存画布失败：${response.status}`);
-  return response.json();
+async function acceptSavedCanvas(cardId,result) {
+  const snapshot=result.canvasDocuments?.[cardId];
+  if(!snapshot)return;
+  canvasRevisions.set(cardId,snapshot.revision);
+  cardCoverDataCache.clear();canvasSummaryCache.clear();
+  const frame=$('#editorDialog .main-canvas-frame');
+  const config=canvasFrameConfigs.get(frame);
+  if(config)config.snapshot=snapshot;
+  if(frame)await notifyCanvasSaved(frame,snapshot).catch(error=>console.warn('画布已保存，但界面刷新失败',error));
 }
 
 function syncPrimaryAttachment(entry,snapshot) {
@@ -2956,6 +2668,7 @@ async function saveForm(event) {
   const now = WorkbenchData.isoNow();
   const taskData = data.type === "project" ? { tasks:editingTasks.filter(task => task.text.trim()) } : {};
   const mainCard=WorkbenchCardV2.MAIN_TYPES.has(data.type);
+  let pendingCanvas=null;
   if(mainCard) {
     try {
       const frame=$("#editorDialog .main-canvas-frame");
@@ -2969,16 +2682,13 @@ async function saveForm(event) {
       }
       else snapshot.coverAssetId=editingCoverSelection;
       snapshot.cardInfo={title:data.title,type:data.type};
-      const result=await saveCanvasDocument(editingCanvasId,snapshot);
-      const normalized=result.snapshot||await loadCanvasDocument(editingCanvasId);
-      await notifyCanvasSaved(frame,normalized);
-      const config=canvasFrameConfigs.get(frame);
-      if(config)config.snapshot=normalized;
-      cardCoverDataCache.clear();
-      canvasSummaryCache.clear();
+      const configBeforeSave=canvasFrameConfigs.get(frame);
+      const originalDocument=await configBeforeSave?.initialDocument;
+      snapshot.baseRevision=(configBeforeSave?.snapshot || originalDocument)?.revision ?? null;
+      pendingCanvas=snapshot;
       data.content=snapshot.text;
       data.canvasVersion=1;
-      if(existing?.assetId) syncPrimaryAttachment(data,normalized);
+
       if(existing?.canvasVersion!==1 && existing?.content) data.legacyContent=existing.content;
     } catch(error) { console.error(error);toast("画布保存失败："+error.message);return; }
   }
@@ -2988,47 +2698,44 @@ async function saveForm(event) {
   const entry = WorkbenchData.normalizeEntry({ ...(existing||{}), ...defaults[data.type], ...data, ...editingRefs, ...taskData, id:existing?.id || editingCanvasId || crypto.randomUUID(), deletedAt:existing?.deletedAt || null, ...(mainCard ? {structureVersion:2} : {archived:false,created:existing?.created || today(),updated:today()}), createdAt:existing?.createdAt || now, updatedAt:now });
   const reviewProject = entry.type === "review" ? entryById(entry.projectRefs?.[0]) : null;
   if(!existing) {
-    try { await commitUnifiedState({...state,entries:[entry,...state.entries]},"已加入知识工作台"); }
+    try { const result=await commitUnifiedState({...state,entries:[entry,...state.entries]},'已加入知识工作台',pendingCanvas?{canvasDocuments:{[entry.id]:pendingCanvas}}:{});await acceptSavedCanvas(entry.id,result); }
     catch(error) { console.error(error);toast("卡片保存失败："+error.message);return; }
     $("#editorDialog").close();
     editorReturnEntryId=null;
     if(standaloneCardId)window.close();
     return;
   }
-  if (existing) state.entries = WorkbenchRelations.detach(state.entries.map(e => e.id === existing.id ? entry : e),entry.id,editingRemovedRelations,now); else state.entries.unshift(entry);
+  const nextEntries=WorkbenchRelations.detach(state.entries.map(e=>e.id===existing.id?entry:e),entry.id,editingRemovedRelations,now);
+  try {const result=await commitUnifiedState({...state,entries:nextEntries},'修改已保存',pendingCanvas?{canvasDocuments:{[entry.id]:pendingCanvas}}:{});await acceptSavedCanvas(entry.id,result);}
+  catch(error){console.error(error);toast('卡片保存失败：'+error.message);return;}
   $("#editorDialog").close();
-  saveState(existing ? "修改已保存" : "已加入知识工作台");
   editorReturnEntryId = null;
-  if (mainCard) openViewer(entry,{transferRect:editorRect,scrollTop:editorScroll,canvasFrame});
-  else if(standaloneCardId) openViewer(entry);
+  if (mainCard) openViewer(entryById(entry.id)||entry,{transferRect:editorRect,scrollTop:editorScroll,canvasFrame});
+  else if(standaloneCardId) openViewer(entryById(entry.id)||entry);
   else if (reviewProject) openViewer(reviewProject);
 }
 
-function convertCapture(targetType) {
+async function convertCapture(targetType) {
   const stored = entryById(editingId);
   const formData = Object.fromEntries(new FormData($("#editorForm")));
   const current = { ...stored, ...formData, ...editingRefs };
   if (!current || current.type !== "capture") return;
   const converted = WorkbenchData.normalizeEntry(WorkbenchCardV2.convertCapture(current,targetType,WorkbenchData.isoNow()));
-  state.entries = state.entries.map(e => e.id === current.id ? converted : e);
-  state.updatedAt = nextStateTime();
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
-  recordActivity();
+  try{await commitUnifiedState({...state,entries:state.entries.map(e=>e.id===current.id?converted:e)},'分类已保存');}
+  catch(error){toast('分类保存失败：'+error.message);return;}
   $("#editorDialog").close();
   openEditor(targetType,converted);
   toast(`已转为${typeLabel(targetType)}，请继续整理`);
 }
 
-function returnToInbox() {
+async function returnToInbox() {
   const stored = entryById(editingId);
   if (!stored) return;
   const formData = Object.fromEntries(new FormData($("#editorForm")));
   const current = { ...stored, ...formData, ...editingRefs };
   const reverted = { ...current, type:"capture", lastMainType:current.type, rawContent:current.originalCapture?.content || current.content || current.goal || "", origin:current.originalCapture?.origin || current.origin || "", updated:today(), updatedAt:WorkbenchData.isoNow() };
-  state.entries = state.entries.map(e => e.id === current.id ? reverted : e);
-  state.updatedAt = nextStateTime();
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
-  recordActivity();
+  try{await commitUnifiedState({...state,entries:state.entries.map(e=>e.id===current.id?reverted:e)},'恢复分类已保存');}
+  catch(error){toast('分类保存失败：'+error.message);return;}
   $("#editorDialog").close();
   openEditor("capture",reverted);
   toast("已恢复为随手记，原分类字段仍然保留");
@@ -3078,6 +2785,32 @@ function renderHealthReport(report, targetSelector="#dataHealthReport") {
   target.innerHTML = lines.join("");
 }
 
+async function reloadVaultFromDisk() {
+  if(!confirm('重新载入会放弃当前未保存修改。需要保留时，请先导出迁移包；正在编辑的卡片请先取消编辑。是否继续？'))return;
+  if($('#editorDialog').open){toast('请先关闭当前编辑，再重新载入');return;}
+  if(await hydrateDesktopState())toast('已从硬盘重新载入资料库');
+}
+
+async function rebuildVaultFromCards() {
+  if(vaultSession.blocked){toast('请先导出未保存内容并重新载入资料库，再重建目录');return;}
+  const button=$('#rebuildVault');button.disabled=true;
+  try {
+    let result;
+    if(window.workbenchDesktop?.rebuildVault)result=await window.workbenchDesktop.rebuildVault();
+    else {
+      const response=await fetch('/api/vault/rebuild',{method:'POST'});
+      result=await response.json();
+      if(!response.ok)throw new Error(result.error || '重建失败');
+    }
+    await hydrateDesktopState();
+    const missing=result.missingAttachments.length+result.missingCanvases.length;
+    $('#vaultResult').innerHTML=`<div class="health-line ${missing?'warning':'ok'}">已从 ${result.cards} 张卡片重建汇总、卡片清单、附件查找索引和全文搜索目录。${missing?'发现 '+missing+' 项原文件或画布缺失，重建不能恢复缺失内容。':''}</div>`;
+    updateDataManager();void refreshSearchIndexStatus();
+    toast('数据目录已重建');
+  } catch(error){$('#vaultResult').innerHTML='<div class="health-line error">'+escapeHtml(error.message)+'</div>';toast('重建失败');}
+  finally {button.disabled=false;}
+}
+
 function updateDataManager() {
   const report = WorkbenchData.validateState(state);
   $("#dataSchemaVersion").textContent = `v${WorkbenchData.SCHEMA_VERSION}`;
@@ -3125,12 +2858,9 @@ async function syncCardsToVault() {
   try {
     let result;
     const bundle = WorkbenchData.createBundle(state);
-    if (window.workbenchDesktop?.isDesktop) result = await window.workbenchDesktop.syncCards(bundle);
-    else {
-      const response = await fetch("/api/vault/sync-cards", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(bundle) });
-      result = await response.json();
-      if (!response.ok) throw new Error(result.error || "写入失败");
-    }
+    result=await vaultSession.save(bundle);
+    state=WorkbenchData.normalizeState(result.state || state);
+    cacheSavedState(state);
     const integrityNotice = result.integrity?.healthy
       ? ""
       : `<div class="health-line warning">发现 ${result.integrity?.unknownMarkdown?.length || 0} 个未登记 Markdown 和 ${result.integrity?.missingMarkdown?.length || 0} 个缺失文件；系统没有自动导入或删除，请查看同步日志。</div>`;
@@ -3424,8 +3154,7 @@ async function useAssetAction(action, assetId) {
           updatedAt:WorkbenchData.isoNow()
         });
         assetPresentationCache.delete(assetId);
-        saveState("文件已重新关联");
-        await window.workbenchDesktop.syncCards(WorkbenchData.createBundle(state));
+        if(!await saveState("文件已重新关联"))return;
         const wasViewing = $("#viewerDialog").open;
         if ($("#editorDialog").open) $("#editorDialog").close();
         if (wasViewing) { closeViewerDialog(); openViewer(entry); }
@@ -3450,9 +3179,13 @@ function openDataManager() {
 async function previewImport(file) {
   try {
     const parsed = WorkbenchData.readBundle(await file.text());
+    for(const [id,snapshot] of Object.entries(parsed.canvasDocuments)) {
+      const current=await loadCanvasDocument(id);
+      snapshot.baseRevision=current?.revision ?? null;
+    }
     pendingImport = parsed;
     const { report } = parsed;
-    $("#importPreviewSummary").textContent = `将导入 ${report.stats.total} 张卡片，其中 ${report.stats.trash} 张位于回收站。确认后会替换当前浏览器中的全部内容。`;
+    $("#importPreviewSummary").textContent = Array.isArray(parsed.changedIds)?`将恢复 ${parsed.changedIds.length} 张卡片的未保存修改；其他卡片保留硬盘当前版本。请先核对同一卡片的新内容，再确认恢复。`:`将导入 ${report.stats.total} 张卡片，其中 ${report.stats.trash} 张位于回收站。确认后写入资料库；移除现有卡片仍需永久删除记录。`;
     renderHealthReport(report,"#importPreviewIssues");
     $("#confirmImport").disabled = !report.ok;
     $("#importPreview").classList.remove("hidden");
@@ -3465,12 +3198,12 @@ async function previewImport(file) {
   }
 }
 
-function confirmImport() {
+async function confirmImport() {
   if (!pendingImport?.report.ok) return;
   localStorage.setItem(`${STORAGE_KEY}-pre-import`,JSON.stringify(state));
-  state = pendingImport.state;
+  try{await commitUnifiedState(pendingImport.state,'迁移包已导入',{canvasDocuments:pendingImport.canvasDocuments,...(Array.isArray(pendingImport.changedIds)?{changedIds:pendingImport.changedIds}:{})});}
+  catch(error){toast('导入未完成：'+error.message);return;}
   pendingImport = null;
-  saveState("迁移包已导入");
   $("#dataDialog").close();
 }
 
@@ -3600,10 +3333,7 @@ document.addEventListener("click", event => {
   const nav=event.target.closest("[data-view]"); if (nav) switchView(nav.dataset.view);
   const openProjectReview = event.target.closest("[data-open-project-review]"); if (openProjectReview) { switchView("projects"); toast("打开一个项目，在阅读页底部点击“写项目复盘”"); return; }
   const viewLink=event.target.closest("[data-view-link]"); if (viewLink) switchView(viewLink.dataset.viewLink);
-  const recentStep=event.target.closest('[data-recent-step]');
-  if(recentStep){updateRecentStack(Number(recentStep.dataset.recentStep),{stackKey:recentStep.dataset.homeStack||'recent'});return;}
-  const recentBack=event.target.closest('.home-recent-card:not(.is-front)');
-  if(recentBack){const stackKey=recentBack.dataset.homeStack||'recent',stack=homeStacks[stackKey],cards=$$(stack.id+' .home-recent-card');let step=(Number(recentBack.dataset.recentIndex)-stack.index+cards.length)%cards.length;if(step>cards.length/2)step-=cards.length;updateRecentStack(step,{stackKey});return;}
+  if(handleStackClick(event.target))return;
   if(event.target.closest('[data-home-import]')){openAssetImportDialog();return;}
   const pendingView=event.target.closest('[data-home-pending-view]');
   if(pendingView){switchView(pendingView.dataset.homePendingView);currentFilter=pendingView.dataset.homePendingFilter;renderCollection();return;}
@@ -3849,25 +3579,28 @@ $("#cancelEdit").addEventListener("click",()=>{
   if (returnEntry) openViewer(returnEntry,{transferRect,scrollTop,canvasFrame,discardCanvas:true});
 });
 $("#editorForm").addEventListener("submit",saveForm);
-$("#deleteEntry").addEventListener("click",()=>{
-  const entry=entryById(editingId); if (!entry || !confirm("将这条内容移到回收站吗？之后可以恢复。")) return;
-  entry.deletedAt=new Date().toISOString(); $("#editorDialog").close();
-  if (editingId === browsingAreaId) switchView("areas");
-  saveState("已移到回收站");
+$("#deleteEntry").addEventListener("click",async()=>{
+  const entry=entryById(editingId);if(!entry||!confirm('将这条内容移到回收站吗？之后可以恢复。'))return;
+  try{await commitUnifiedState({...state,entries:state.entries.map(card=>card.id===entry.id?{...card,deletedAt:new Date().toISOString()}:card)},'已移到回收站');}
+  catch(error){toast('尚未删除：'+error.message);return;}
+  $("#editorDialog").close();
+  if(entry.id===browsingAreaId)switchView('areas');
 });
-$("#restoreEntry").addEventListener("click",()=>{
-  const entry=entryById(editingId); if (!entry) return;
-  entry.deletedAt=null; $("#editorDialog").close(); saveState("内容已恢复");
+$("#restoreEntry").addEventListener("click",async()=>{
+  const entry=entryById(editingId);if(!entry)return;
+  try{await commitUnifiedState({...state,entries:state.entries.map(card=>card.id===entry.id?{...card,deletedAt:null}:card)},'内容已恢复');}
+  catch(error){toast('恢复失败：'+error.message);return;}
+  $("#editorDialog").close();
 });
-$("#permanentDelete").addEventListener("click",()=>{
+$("#permanentDelete").addEventListener("click",async()=>{
   const entry=entryById(editingId);
-  if (!entry?.deletedAt) { toast("只有回收站中的卡片可以永久删除"); return; }
-  if (!confirm(`将“${entry.title}”永久删除？卡片正文将无法恢复，但关联的原始文件会保留。`)) return;
-  state.tombstones ||= [];
-  state.tombstones = WorkbenchData.normalizeTombstones([...state.tombstones, { id:entry.id, type:entry.type, deletedAt:WorkbenchData.isoNow() }]);
-  state.entries=state.entries.filter(e=>e.id!==editingId);
-  state.entries.forEach(e=>["areaRefs","sourceRefs","relatedRefs","projectRefs"].forEach(k=>{ if(e[k]) e[k]=e[k].filter(id=>id!==editingId); }));
-  $("#editorDialog").close(); saveState("内容已永久删除");
+  if(!entry?.deletedAt){toast('只有回收站中的卡片可以永久删除');return;}
+  if(!confirm('将“'+entry.title+'”永久删除？卡片正文将无法恢复，但关联的原始文件会保留。'))return;
+  const tombstones=WorkbenchData.normalizeTombstones([...(state.tombstones || []),{id:entry.id,type:entry.type,deletedAt:WorkbenchData.isoNow()}]);
+  const entries=state.entries.filter(card=>card.id!==entry.id).map(card=>({...card,...Object.fromEntries(['areaRefs','sourceRefs','relatedRefs','projectRefs'].filter(key=>card[key]).map(key=>[key,card[key].filter(id=>id!==entry.id)]))}));
+  try{await commitUnifiedState({...state,entries,tombstones},'内容已永久删除');}
+  catch(error){toast('永久删除失败：'+error.message);return;}
+  $("#editorDialog").close();
 });
 $("#searchInput").addEventListener("input",event=>{
   const hasQuery = event.target.value.trim().length > 0;
@@ -3886,19 +3619,6 @@ $("#searchInput").addEventListener("input",event=>{
   else render();
 });
 $("#clearSearch").addEventListener("click",exitSearch);
-for(const [stackKey,stack] of Object.entries(homeStacks)){
-  $(stack.id).addEventListener('wheel',event=>{
-    if(event.ctrlKey||$$(stack.id+' .home-recent-card').length<2)return;
-    event.preventDefault();
-    const delta=(event.deltaY||event.deltaX)*(event.deltaMode===1?16:event.deltaMode===2?300:1);
-    if(delta)scrollRecentStack(delta,performance.now(),{lineMode:event.deltaMode!==0,stackKey});
-  },{passive:false});
-  $(stack.id).addEventListener('keydown',event=>{
-    if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key)||$$(stack.id+' .home-recent-card').length<2)return;
-    event.preventDefault();updateRecentStack(['ArrowUp','ArrowLeft'].includes(event.key)?-1:1,{stackKey});
-    $(stack.id+' .is-front')?.focus({preventScroll:true});
-  });
-}
 $("#clearSearchFilters").addEventListener("click",()=>clearAdvancedSearchFilters(true));
 const searchStatusMenu = $("#searchStatusMenu");
 const searchStatusTrigger = $("#searchStatusTrigger");
@@ -3978,13 +3698,19 @@ $("#doneDataDialog").addEventListener("click",()=>$("#dataDialog").close());
 $("#runDataCheck").addEventListener("click",()=>{ updateDataManager(); toast("检查完成"); });
 $("#refreshVaultStatus").addEventListener("click",refreshVaultStatus);
 $("#syncCardsToVault").addEventListener("click",syncCardsToVault);
+$('#reloadVault').addEventListener('click',reloadVaultFromDisk);
+$('#rebuildVault').addEventListener('click',rebuildVaultFromCards);
 $("#refreshIndexStatus").addEventListener("click",refreshSearchIndexStatus);
 $("#rebuildSearchIndex").addEventListener("click",rebuildDesktopSearchIndex);
 $("#refreshSemanticStatus").addEventListener("click",refreshSemanticStatus);
 $("#rebuildSemanticIndex").addEventListener("click",rebuildDesktopSemanticIndex);
 $("#semanticModelSelect").addEventListener("change",saveSemanticPreferences);
 $("#semanticDeviceSelect").addEventListener("change",saveSemanticPreferences);
-$("#exportBundle").addEventListener("click",()=>{ WorkbenchData.exportBundle(state,today()); toast("完整迁移包已导出"); });
+$("#exportBundle").addEventListener("click",()=>{
+  const failed=vaultSession.failedBundle;
+  if(failed){WorkbenchData.download('知识工作台未保存修改-'+today()+'.kwb.json',JSON.stringify(failed,null,2),'application/json;charset=utf-8');toast('未保存修改已导出，包含本次提交的画布');}
+  else{WorkbenchData.exportBundle(state,today());toast('完整迁移包已导出');}
+});
 $("#exportData").addEventListener("click",exportMarkdown);
 $("#chooseImport").addEventListener("click",()=>$("#importBundleFile").click());
 $("#importBundleFile").addEventListener("change",event=>{ const [file]=event.target.files; if(file) previewImport(file); });
@@ -4011,13 +3737,6 @@ $$('[data-reset-dialog-size]').forEach(button=>button.addEventListener("click",(
 }));
 window.addEventListener("resize",()=>{fitOpenCardDialogs();fitMainContentInput();fitProjectTextFields();fitMainCanvasFrames();});
 new ResizeObserver(fitProjectTextFields).observe($("#formFields"));
-const homeStackSizeObserver=new ResizeObserver(records=>{
-  for(const record of records){
-    const pair=Object.entries(homeStacks).find(([,stack])=>$(stack.id)===record.target);
-    if(pair&&Math.abs(record.contentRect.width-(pair[1].layoutWidth??0))>.5)updateRecentStack(0,{stackKey:pair[0]});
-  }
-});
-Object.values(homeStacks).forEach(stack=>homeStackSizeObserver.observe($(stack.id)));
 const canvasViewportObserver=new ResizeObserver(fitMainCanvasFrames);
 canvasViewportObserver.observe($("#viewerBody"));
 canvasViewportObserver.observe($("#formFields"));
@@ -4030,10 +3749,8 @@ document.addEventListener("keydown",e=>{
 if(!standaloneCardId)initializeSemanticPreferences();
 render();
 async function initializeCardWindow(){
+  await hydrateDesktopState();
   if(standaloneCardId){
-    // The main window already loaded/saved this shared local state. Only read
-    // the vault when the requested card is actually missing from that cache.
-    if(standaloneCardId!=='new'&&!entryById(standaloneCardId))await hydrateDesktopState();
     const params=new URLSearchParams(location.search),entry=entryById(standaloneCardId);
     if(standaloneCardId==='new'&&Object.hasOwn(schemas,params.get('type'))){let preset={};try{preset=JSON.parse(params.get('preset')||'{}');}catch{}openEditor(params.get('type'),null,preset);}
     else if(entry){if(params.get('edit')==='1')openEditor(entry.type,entry,{}, {returnToViewer:true});else openViewer(entry);}
@@ -4043,7 +3760,7 @@ async function initializeCardWindow(){
     // Hidden Electron windows can throttle animation frames. Do not gate
     // showing a populated, themed dialog on a hidden-window animation frame.
     void window.workbenchDesktop?.cardWindowReady?.();
-  }else await hydrateDesktopState();
+  }
 }
 void initializeCardWindow();
 function refreshOpenCardRelations(){
@@ -4061,11 +3778,12 @@ function refreshOpenCardRelations(){
   }
 }
 function syncSharedCardState(raw){
-  if(!raw)return;
-  try{state=migrateState(JSON.parse(raw));render();refreshOpenCardRelations();}
-  catch(error){console.warn('卡片窗口同步失败',error);}
+  if(!raw || $('#editorDialog').open || vaultSession.blocked)return;
+  void hydrateDesktopState().then(()=>refreshOpenCardRelations());
 }
+
 window.addEventListener('storage',event=>{if(event.key?.startsWith(ACTIVITY_PREFIX)&&!standaloneCardId)renderActivityCalendar();if(event.key===RECENT_VISITS_KEY&&!standaloneCardId)renderHome();if(event.key===STORAGE_KEY)syncSharedCardState(event.newValue);});
+window.workbenchDesktop?.onVaultChanged?.(()=>syncSharedCardState('disk-change'));
 if(standaloneCardId)window.addEventListener('focus',()=>syncSharedCardState(localStorage.getItem(STORAGE_KEY)));
 if(standaloneCardId){
   ['closeViewer','closeViewerBottom','closeDialog'].forEach(id=>document.getElementById(id).addEventListener('click',()=>window.close()));

@@ -9,7 +9,13 @@ contextBridge.exposeInMainWorld("workbenchDesktop", {
   cardWindowReady: () => ipcRenderer.invoke('cards:ready'),
   vaultStatus: () => ipcRenderer.invoke("vault:status"),
   loadLatestState: () => ipcRenderer.invoke("vault:loadLatestState"),
+  rebuildVault: () => ipcRenderer.invoke('vault:rebuild'),
   syncCards: bundle => ipcRenderer.invoke("vault:syncCards", bundle),
+  onVaultChanged: callback => {
+    const listener=()=>callback();
+    ipcRenderer.on('vault:changed',listener);
+    return ()=>ipcRenderer.removeListener('vault:changed',listener);
+  },
   loadCanvasDocument: cardId => ipcRenderer.invoke("canvas:load", cardId),
   saveCanvasDocument: (cardId, snapshot) => ipcRenderer.invoke("canvas:save", cardId, snapshot),
   search: options => ipcRenderer.invoke("search:query", options),
